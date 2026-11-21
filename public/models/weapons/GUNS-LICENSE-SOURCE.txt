@@ -1,0 +1,10 @@
+LICENSE SOURCE (collector record, not part of the original archive)
+=====================================================================
+Asset: Animated Guns Pack
+Author: Quaternius (https://quaternius.com)
+Source: https://opengameart.org/content/low-poly-animated-guns
+License declared on source page: CC0 (Public Domain)
+Collected: 2026-10-29
+Original archive SHA-256: 1af9e37e9852dea6bb5e1db8b93a057e067e740083a5ba48e6bb13fc8d19ccaf
+Changes: none to asset files; this LICENSE-SOURCE.txt was added by the
+collector because the original archive contained no license file.
