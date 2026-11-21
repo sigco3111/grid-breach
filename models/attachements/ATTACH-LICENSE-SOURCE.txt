@@ -1,0 +1,8 @@
+PotionCC0.glb  <- Ultimate RPG Items Pack (Aug 2019), OBJ/Potion1_Filled.{obj,mtl}
+Author: Quaternius (https://quaternius.com)
+License: CC0 1.0 Universal (Public Domain Dedication)
+Source page: https://opengameart.org/content/low-poly-rpg-pack
+Source file: https://opengameart.org/sites/default/files/ultimate_rpg_items_pack_by_quaternius_0.zip
+Downloaded: 2026-11-21; License.txt from the zip is kept at /downloads/assets-cc0/rpg/License.txt
+Converted OBJ -> GLB locally (three.js OBJLoader/MTLLoader + GLTFExporter), no edits.
+e8b85bb8465f161e8818a7d0072a2f42adcf4980836b531ed8777173baad2177  public/models/attachements/PotionCC0.glb
