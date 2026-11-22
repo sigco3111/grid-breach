@@ -26,6 +26,9 @@ const _chest = /* @__PURE__ */ new Vector3();
 const _muzzle = /* @__PURE__ */ new Vector3();
 const _barrel = /* @__PURE__ */ new Vector3();
 const _shot = /* @__PURE__ */ new Vector3();
+const _aimMuzzle = /* @__PURE__ */ new Vector3();
+const _aimBarrel = /* @__PURE__ */ new Vector3();
+const _aimDir = /* @__PURE__ */ new Vector3();
 const _tangent = /* @__PURE__ */ new Vector3();
 const _bitangent = /* @__PURE__ */ new Vector3();
 const _probe = /* @__PURE__ */ new Vector3();
@@ -709,6 +712,25 @@ export class Gunplay {
     this.aimPoint
       .copy(origin)
       .addScaledVector(direction, Math.max(floor, distance));
+    // The round leaves the muzzle, not the lens. A body the lens ray misses (or
+    // is too near for) can still stand on the barrel's line, and the reticle
+    // should say so: point-blank targets and the shoulder's parallax both
+    // landed hits while the reticle read "off target". Only ever turns the flag
+    // on, and only when nothing solid sits between the muzzle and that body.
+    if (!onBody && this._resolveMuzzle(_aimMuzzle, _aimBarrel)) {
+      _aimDir.copy(this.aimPoint).sub(_aimMuzzle);
+      const reach = _aimDir.length();
+      if (reach > 1e-3) {
+        _aimDir.multiplyScalar(1 / reach);
+        const shot = nearestBody(this.enemies.enemies, _aimMuzzle, _aimDir, reach + 1);
+        if (shot) {
+          const blocked =
+            this._marchGround(_aimMuzzle, _aimDir, shot.distance, config.step) !== null ||
+            (this.cover && coverDistance(this.cover, _aimMuzzle, _aimDir, shot.distance) !== null);
+          if (!blocked) onBody = true;
+        }
+      }
+    }
     this.onBody = onBody;
   }
 

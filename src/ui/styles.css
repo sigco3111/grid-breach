@@ -1043,9 +1043,11 @@ body.cs-open .stats {
   font-size: 0.52rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .move__key {
+  white-space: nowrap;
   font-size: 0.5rem;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -1136,6 +1138,20 @@ body.cs-open .stats {
 /* Narrow windows: the hint would sit on the bottom-centre move row, so lift it. */
 @media (max-width: 1100px) {
   .hint { bottom: 5.4rem; max-width: 14rem; }
+}
+
+/* Narrow windows: tighten the bottom row so each name stays on one line. */
+@media (max-width: 700px) {
+  .move { flex-shrink: 0; gap: 0.25rem; padding: 0.22rem 0.35rem 0.28rem; }
+  .move__name { letter-spacing: 0.08em; }
+  .hud__row { gap: 0.4rem; }
+}
+
+/* Short windows: the diagnostics readout steps aside and the hint widens, so
+   the growth panel and the hint stop covering the middle of the view. */
+@media (max-height: 520px) {
+  .stats { display: none; }
+  .hint { max-width: 22rem; }
 }
 
 /* -------------------------------------------------------------- reticle */

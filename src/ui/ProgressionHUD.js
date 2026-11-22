@@ -58,7 +58,25 @@ export class ProgressionHUD {
     window.addEventListener('keydown', (event) => {
       if (event.code === 'KeyB') this._buy('damage');
     });
+    this.place();
+    this._onResize = () => {
+      this.place();
+      this.onUpdate?.();
+    };
+    window.addEventListener('resize', this._onResize);
     this.update(true);
+  }
+
+  /**
+   * Sit under the diagnostics readout when it is on screen, so the two never
+   * overlap. A short window hides that readout (see styles.css), and then the
+   * panel goes to the top edge to leave the middle of the view clear.
+   */
+  place() {
+    const stats = document.querySelector('.stats');
+    const shown = stats && !stats.hidden && getComputedStyle(stats).display !== 'none';
+    const top = shown ? Math.ceil(stats.getBoundingClientRect().bottom) + 8 : window.innerHeight <= 520 ? 12 : 96;
+    this.element.style.top = `${top}px`;
   }
 
   _buy(track) {
@@ -68,6 +86,14 @@ export class ProgressionHUD {
 
   /** Re-render only when the numbers actually moved. */
   update(force = false) {
+    // The resize event can land before the stylesheet has re-applied, so the
+    // window size is also checked here, where it costs two comparisons.
+    if (this._vw !== window.innerWidth || this._vh !== window.innerHeight) {
+      this._vw = window.innerWidth;
+      this._vh = window.innerHeight;
+      this.place();
+      force = true;
+    }
     const p = this.progression;
     const costs = { damage: p.damageCost, health: p.healthCost, speed: p.speedCost };
     const names = { damage: '피해', health: '체력', speed: '속도' };
@@ -89,6 +115,7 @@ export class ProgressionHUD {
   }
 
   dispose() {
+    window.removeEventListener('resize', this._onResize);
     this.element.remove();
   }
 }
