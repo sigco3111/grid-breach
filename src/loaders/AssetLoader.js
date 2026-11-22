@@ -33,6 +33,27 @@ function basename(url) {
  * for an image that is actually embedded in the model is served from memory
  * (see `fbxEmbeddedMedia.js`).
  */
+/**
+ * Run a load, trying again after a short wait when it fails.
+ *
+ * A phone on a weak connection drops a request now and then ("Load failed" in
+ * Safari), and one dropped model used to end the whole boot. Three tries with
+ * a growing wait ride out a blip; a file that is really missing still fails
+ * after the last one, with its own error.
+ */
+async function withRetry(run, tries = 3) {
+  let last;
+  for (let attempt = 0; attempt < tries; attempt++) {
+    try {
+      return await run();
+    } catch (error) {
+      last = error;
+      await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
+    }
+  }
+  throw last;
+}
+
 export class AssetLoader {
   constructor() {
     this.manager = new LoadingManager();
@@ -103,10 +124,11 @@ export class AssetLoader {
     this.manager.itemStart(resolved);
 
     try {
-      const response = await fetch(resolved);
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText} — ${url}`);
-
-      const buffer = await response.arrayBuffer();
+      const buffer = await withRetry(async () => {
+        const response = await fetch(resolved);
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText} — ${url}`);
+        return response.arrayBuffer();
+      });
       for (const [name, objectURL] of extractEmbeddedMedia(buffer)) {
         this.embedded.set(name, objectURL);
       }
@@ -131,23 +153,23 @@ export class AssetLoader {
    * @returns {Promise<{scene: THREE.Group, animations: THREE.AnimationClip[]}>}
    */
   loadGLTF(url) {
-    return new Promise((resolve, reject) => {
+    return withRetry(() => new Promise((resolve, reject) => {
       this.gltf.load(encodeURI(url), resolve, undefined, reject);
-    });
+    }));
   }
 
   /** @returns {Promise<THREE.Texture>} */
   loadTexture(url) {
-    return new Promise((resolve, reject) => {
+    return withRetry(() => new Promise((resolve, reject) => {
       this.texture.load(encodeURI(url), resolve, undefined, reject);
-    });
+    }));
   }
 
   /** @returns {Promise<THREE.DataTexture>} */
   loadHDR(url) {
-    return new Promise((resolve, reject) => {
+    return withRetry(() => new Promise((resolve, reject) => {
       this.hdr.load(encodeURI(url), resolve, undefined, reject);
-    });
+    }));
   }
 
   /**

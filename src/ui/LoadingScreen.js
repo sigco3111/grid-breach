@@ -29,5 +29,13 @@ export class LoadingScreen {
     if (this.status) this.status.textContent = message;
     this.root?.classList.remove('loader--done');
     this.root?.classList.add('loader--failed');
+    if (this.root && !this.root.querySelector('.loader__retry')) {
+      const button = document.createElement('button');
+      button.className = 'loader__retry';
+      button.textContent = '다시 시도';
+      button.style.cssText = 'margin-top:14px;padding:10px 22px;font:inherit;font-size:15px;border-radius:8px;border:1px solid rgba(220,232,247,.5);background:rgba(20,30,44,.8);color:#e6f0ff;cursor:pointer;pointer-events:auto;';
+      button.addEventListener('click', () => location.reload());
+      (this.status?.parentElement ?? this.root).appendChild(button);
+    }
   }
 }
