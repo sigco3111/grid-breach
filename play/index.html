@@ -91,7 +91,7 @@ const d=generateDungeon({seed:SEED,roomCount:NR,themeKey:'frost',loopChance:0.1,
 const W=d.W,H=d.H,idx=(x,y)=>y*W+x;
 const $=id=>document.getElementById(id);
 const TOUCH=P.get('touch')?true:(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window);document.body.classList.toggle('touch',TOUCH);
-const cv=$('c');const rd=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(devicePixelRatio,2));
+const cv=$('c');const rd=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(devicePixelRatio,1.5));
 const sc=new THREE.Scene();sc.background=new THREE.Color(0x070b10);sc.fog=new THREE.Fog(0x070b10,38,80);
 sc.add(new THREE.HemisphereLight(0xb8c8dc,0x3a3d44,2.4));const dl=new THREE.DirectionalLight(0xffeedd,2.2);dl.position.set(-10,24,8);sc.add(dl);
 const cam=new THREE.PerspectiveCamera(38,1,1,200);
@@ -327,7 +327,12 @@ function step(dt){if(S.over||panelOpen)return;S.t+=dt;if(S.winT>0){S.winT-=dt;if
 }
 function hud(){renderCombatHUD();{const tb=$('top').getBoundingClientRect();$('bAuto').style.top=Math.round(tb.bottom+8)+'px';$('bBuild').style.top=Math.round(tb.bottom+8)+'px'}$('xp').textContent='Lv.'+levelFor(S.xp)+' · XP '+S.xp+' · 포인트 '+(pointsFor(S.xp)-usedPoints(build))+(S.reward?' · 누적 완주 보상 '+S.reward:' · 완주 보상 대기');$('hpt').textContent='체력 '+Math.max(0,Math.ceil(S.hp))+'/'+S.hpMax;$('hp').style.width=Math.max(0,S.hp/S.hpMax*100)+'%';const n=rs.filter(q=>q.cleared&&!q.empty&&q.r.type!=='entrance').length;$('zt').textContent='구역 '+n+'/'+fightRooms.length;
  const boss=enemies.find(e=>e.kind==='boss');$('zt').textContent=OPERATIONS[operation].name+' · '+['일반','상위 I','상위 II'][difficulty]+' · '+n+'/'+fightRooms.length;const act=rs.find(o=>o.active&&!o.cleared);$('et').textContent=boss?'보스 '+Math.ceil(boss.hp)+'/'+Math.ceil(boss.hpMax)+' · '+(boss.hp<boss.hpMax*.5?'격노':'경계'):act?'적 '+act.enemies.length+' 남음 · 전멸 시 길 개방':S.won?'샘플 종료':'다음 구역으로 이동';}
-function frame(now){const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;step(dt);saveClock+=dt;if(saveClock>=5){saveClock=0;saveGame()}cam.position.set(S.x+22*ZM,28*ZM,S.z+22*ZM);cam.lookAt(S.x,0,S.z);hud();mapDraw();rd.render(sc,cam);window.__fps=(window.__fps||0)*.9+.1/Math.max(dt,.001);requestAnimationFrame(frame)}
+// Fixed small simulation steps keep visible play close to elapsed time on slower devices.
+// Hidden time is paused, rather than charging damage while the player is away.
+let hudClock=0;
+addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden)saveGame()});
+function frame(now){const wallDt=Math.max(0,(now-last)/1000);last=now;
+ if(!document.hidden){const dt=Math.min(.25,wallDt),steps=Math.max(1,Math.ceil(dt/.025));for(let i=0;i<steps;i++)step(dt/steps);saveClock+=dt;hudClock+=dt;if(saveClock>=5){saveClock=0;saveGame()}cam.position.set(S.x+22*ZM,28*ZM,S.z+22*ZM);cam.lookAt(S.x,0,S.z);if(hudClock>=.1){hudClock=0;hud();mapDraw()}rd.render(sc,cam);window.__fps=(window.__fps||0)*.9+.1/Math.max(wallDt,.001)}requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 window.GB={free,R,locked,cover,losBlocked,bullets,ebul,dbg:()=>({btnFire,mDown:mouse.down,msx:mouse.x,msy:mouse.y,mmoved:mouse.moved,stk:[stick.x,stick.y]}),resetDungeon,reenter,S,d,rs,enemies,ent,T,step,proj(x,z){const v=new THREE.Vector3(x,1,z).project(cam);return[(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]},tpRoom(id){const o=rs.find(q=>q.r.id===id);S.x=o.r.cx*T;S.z=o.r.cy*T},gun:()=>({gunLoaded,gunInfo}),walk,fightRooms};
 // restore only matching map; invalid positions fail safely to preparation
