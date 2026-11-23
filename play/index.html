@@ -71,7 +71,7 @@ function levelFor(xp){let level=1;while(level<25&&xp>=100*level*(level+1)/2)leve
 function pointsFor(xp){return 3+levelFor(xp)-1}
 function usedPoints(b){return NODES.reduce((a,n)=>a+(b[n.id]||0),0)}
 function cleanBuild(v,xp){const b={};let used=0;for(const n of NODES){let r=Math.max(0,Math.min(n.max,Math.floor(Number(v?.[n.id])||0)));if(n.requires&&!b[n.requires])r=0;b[n.id]=Math.min(r,Math.max(0,pointsFor(xp)-used));used+=b[n.id]}return b}
-function cleanSlots(v,b){let drones=0;return [...new Set(Array.isArray(v)?v:[])].filter(id=>NODES.some(n=>n.id===id&&n.active)&&b[id]&&(!id.endsWith('Drone')||++drones<=2)).slice(0,3)}
+function cleanSlots(v,b){const seen=new Set();let drones=0;return Array.from({length:3},(_,i)=>{const id=Array.isArray(v)?v[i]:'';if(!NODES.some(n=>n.id===id&&n.active)||!b[id]||seen.has(id)||id.endsWith('Drone')&&drones>=2)return '';seen.add(id);if(id.endsWith('Drone'))drones++;return id})}
 function recommend(xp,branch){const b=cleanBuild({},xp);let left=pointsFor(xp);const paths={총기:['fire','precision','rifleShot','stance','mobile','counter','control','target','attackDrone'],생존:['stance','mobile','counter','cover','guard','fire','scatter','shotgunBlast'],드론:['control','target','attackDrone','firstaid','healDrone','platform','turret','fire','feed']};const order=[...paths[branch],...NODES.map(n=>n.id)];for(const id of order){const n=NODES.find(n=>n.id===id);if(left&&b[id]===0&&(!n.requires||b[n.requires])){b[id]=1;left--}}for(const n of NODES){const add=Math.min(n.max-b[n.id],left);if(!n.requires||b[n.requires]){b[n.id]+=add;left-=add}}return b}
 function stats(b){return {damage:1+.08*b.fire,rate:1,hp:100+15*b.stance,heal:0,dodge:1-.1*b.mobile,drone:0,range:12+2*b.control,droneRate:1,link:2*b.target,pierce:0}}
 function cleanGear(v){const a={};for(const type of Object.keys(WEAPONS)){const g=v?.[type];a[type]={type,tier:Math.max(0,Math.min(20,Math.floor(+g?.tier||0))),option:['damage','speed','focus'].includes(g?.option)?g.option:'damage'}}return a}
@@ -145,13 +145,13 @@ const flashM=new THREE.Mesh(new THREE.SphereGeometry(.16,6,6),new THREE.MeshBasi
 const S={hp:100,hpMax:100,x:ent.cx*T,z:ent.cy*T,face:0,dash:0,dashCd:0,fireCd:0,skillCd:0,burst:0,auto:false,xp:0,reward:0,kills:0,deaths:0,t:0,over:false,hitFlash:0};
 // progression and storage
 let build=cleanBuild(loaded?.build,loaded?.xp||0),buildStats=stats(build),panelOpen=false,proposal=null,saveClock=0;
-let slots=cleanSlots(loaded?.slots,build),gear=cleanGear(loaded?.gear),loot=loaded?.loot||[],weapon=loaded?.weapon||'rifle',cooldowns=loaded?.cooldowns||{},effects={},switchAt=0,manualUntil=0,stillTime=0,precisionHits=0,fireHeld=0;
+let slots=cleanSlots(loaded?.slots,build),gear=cleanGear(loaded?.gear),loot=loaded?.loot||[],weapon=loaded?.weapon||'rifle',cooldowns=loaded?.cooldowns||{},effects=loaded?.effects||{},switchAt=0,manualUntil=0,stillTime=0,precisionHits=0,fireHeld=0;
 S.xp=loaded?.xp||0;S.hpMax=buildStats.hp;S.hp=S.hpMax;S.kills=loaded?.kills||0;S.deaths=loaded?.deaths||0;
 const droneVisual=mk(0x4eabb5,.5,.2);sc.add(droneVisual);let droneCd=0;
 function atBase(){return !rs.some(o=>o.active&&!o.cleared)&&d.roomId[idx(cellOf(S.x),cellOf(S.z))]===ent.id&&!S.over}
 function safeToSpend(){return !rs.some(o=>o.active&&!o.cleared)&&!S.over}
 function applyStats(){const old=S.hpMax;buildStats=stats(build);S.hpMax=buildStats.hp;S.hp=Math.min(S.hpMax,S.hp+Math.max(0,S.hpMax-old))}
-function makeSave(){return {version:4,xp:S.xp,build,slots,gear,loot,weapon,cooldowns,kills:S.kills,deaths:S.deaths,run:{seed:SEED,roomCount:NR,x:S.x,z:S.z,hp:S.hp,t:S.t,reward:S.reward,won:!!S.won,over:!!S.over,ovKind:S.ovKind||'',rooms:rs.map(o=>({id:o.r.id,cleared:o.cleared,active:o.active})),enemies:enemies.map(e=>({roomId:e.room.r.id,kind:e.kind,x:e.x,z:e.z,hp:e.hp})),locked:[...locked]}}}
+function makeSave(){return {version:4,xp:S.xp,build,slots,gear,loot,weapon,cooldowns,effects,kills:S.kills,deaths:S.deaths,run:{seed:SEED,roomCount:NR,x:S.x,z:S.z,hp:S.hp,t:S.t,reward:S.reward,won:!!S.won,over:!!S.over,ovKind:S.ovKind||'',rooms:rs.map(o=>({id:o.r.id,cleared:o.cleared,active:o.active})),enemies:enemies.map(e=>({roomId:e.room.r.id,kind:e.kind,x:e.x,z:e.z,hp:e.hp})),locked:[...locked]}}}
 function saveGame(){if(saveError)return false;try{const old=localStorage.getItem(SAVE_KEY);if(old){try{unpack(old);localStorage.setItem(SAVE_KEY+'-backup',old)}catch(e){}}localStorage.setItem(SAVE_KEY,JSON.stringify(makeSave()));$('saveState').textContent='자동 저장됨 · 이 브라우저';return true}catch(e){saveError='저장에 실패했습니다. 이 탭을 닫지 마세요.';$('saveState').textContent=saveError;return false}}
 function renderBuild(){const outside=atBase(),safe=safeToSpend(),left=pointsFor(S.xp)-usedPoints(build);
  $('buildSummary').textContent='레벨 '+levelFor(S.xp)+' · XP '+S.xp+' · 남은 포인트 '+left+' / '+pointsFor(S.xp);
@@ -277,7 +277,7 @@ function step(dt){if(S.over||panelOpen)return;S.t+=dt;if(S.winT>0){S.winT-=dt;if
  // one equipped gun at a time; switching uses same rules in manual and auto
  stillTime=(Math.hypot(mx,mz)<.1)?stillTime+dt:0;fireHeld=wantFire?fireHeld+dt:0;
  if(S.auto&&S.t>manualUntil&&tn&&S.t>=switchAt){const ready=slots.map(id=>NODES.find(n=>n.id===id)).find(n=>n?.weapon&&(cooldowns[n.id]||0)<=S.t&&(n.weapon!=='shotgun'||td<10));switchWeapon(ready?.weapon||(td<8?'shotgun':td>17?'rifle':'machinegun'))}
- if(S.auto&&tn){for(let i=0;i<slots.length;i++)if((cooldowns[slots[i]]||0)<=S.t){const id=slots[i];if((id!=='shotgunBlast'||td<10)&&(id!=='counter'||td<7||ebul.some(b=>Math.hypot(b.x-S.x,b.z-S.z)<4))&&(id!=='guard'||stillTime>.7)&&(id!=='healDrone'||S.hp<S.hpMax*.85)){useSkill(i,aimA,tn);break}}}
+ if(S.auto&&tn){for(let i=0;i<slots.length;i++)if(slots[i]&&(cooldowns[slots[i]]||0)<=S.t){const id=slots[i];if((id!=='shotgunBlast'||td<10)&&(id!=='counter'||td<7||ebul.some(b=>Math.hypot(b.x-S.x,b.z-S.z)<4))&&(id!=='guard'||stillTime>.7)&&(id!=='healDrone'||S.hp<S.hpMax*.85)){useSkill(i,aimA,tn);break}}}
  if(S.wantActive!==undefined){useSkill(S.wantActive,aimA,tn);S.wantActive=undefined}
  S.fireCd-=dt;if(wantFire&&aimA!==null&&S.fireCd<=0&&S.t>=switchAt){fireWeapon(aimA);const w=WEAPONS[weapon],g=gear[weapon];S.fireCd=w.interval*(1-(g.option==='speed'?.015*g.tier:0))*(effects.buffDrone?.until>S.t?.8-.02*build.output:1)}
  updateSupport(dt);
@@ -317,7 +317,7 @@ function step(dt){if(S.over||panelOpen)return;S.t+=dt;if(S.winT>0){S.winT-=dt;if
 }
 function hud(){renderCombatHUD();{const tb=$('top').getBoundingClientRect();$('bAuto').style.top=Math.round(tb.bottom+8)+'px';$('bBuild').style.top=Math.round(tb.bottom+8)+'px'}$('xp').textContent='Lv.'+levelFor(S.xp)+' · XP '+S.xp+' · 포인트 '+(pointsFor(S.xp)-usedPoints(build))+(S.reward?' · 완주 보상 +'+S.reward:' · 완주 보상 대기');$('hpt').textContent='체력 '+Math.max(0,Math.ceil(S.hp))+'/'+S.hpMax;$('hp').style.width=Math.max(0,S.hp/S.hpMax*100)+'%';const n=rs.filter(q=>q.cleared&&!q.empty&&q.r.type!=='entrance').length;$('zt').textContent='구역 '+n+'/'+fightRooms.length;
  const act=rs.find(o=>o.active&&!o.cleared);$('et').textContent=act?'적 '+act.enemies.length+' 남음 · 전멸 시 길 개방':S.won?'샘플 종료':'다음 구역으로 이동'}
-function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;step(dt);saveClock+=dt;if(saveClock>=5){saveClock=0;saveGame()}cam.position.set(S.x+22*ZM,28*ZM,S.z+22*ZM);cam.lookAt(S.x,0,S.z);hud();mapDraw();rd.render(sc,cam);window.__fps=(window.__fps||0)*.9+.1/Math.max(dt,.001);requestAnimationFrame(frame)}
+function frame(now){const dt=Math.max(0,Math.min(.05,(now-last)/1000));last=now;step(dt);saveClock+=dt;if(saveClock>=5){saveClock=0;saveGame()}cam.position.set(S.x+22*ZM,28*ZM,S.z+22*ZM);cam.lookAt(S.x,0,S.z);hud();mapDraw();rd.render(sc,cam);window.__fps=(window.__fps||0)*.9+.1/Math.max(dt,.001);requestAnimationFrame(frame)}
 requestAnimationFrame(frame);
 window.GB={free,R,locked,cover,losBlocked,bullets,ebul,dbg:()=>({btnFire,mDown:mouse.down,msx:mouse.x,msy:mouse.y,mmoved:mouse.moved,stk:[stick.x,stick.y]}),resetDungeon,reenter,S,d,rs,enemies,ent,T,step,proj(x,z){const v=new THREE.Vector3(x,1,z).project(cam);return[(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]},tpRoom(id){const o=rs.find(q=>q.r.id===id);S.x=o.r.cx*T;S.z=o.r.cy*T},gun:()=>({gunLoaded,gunInfo}),walk,fightRooms};
 // restore only matching map; invalid positions fail safely to preparation
