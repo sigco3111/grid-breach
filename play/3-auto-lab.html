@@ -1,0 +1,347 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Grid Breach - 분기 트리·종류별 무기</title>
+<style>
+@font-face{font-family:NG;src:url(ng.ttf)}
+html,body{margin:0;height:100%;background:#05080c;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:NG,sans-serif;color:#dfe8f0}
+canvas#c{position:fixed;inset:0;width:100%;height:100%}
+.hud{position:fixed;pointer-events:none;font-size:13px}
+#top{left:10px;top:max(10px,env(safe-area-inset-top));background:rgba(10,16,24,.7);border:1px solid #2a3a4a;border-radius:8px;padding:8px 10px;min-width:170px}
+#hpbar{height:8px;background:#222;border-radius:4px;margin-top:6px;overflow:hidden}#hp{height:100%;background:#5ccf7a;width:100%}
+#zone{right:10px;top:max(10px,env(safe-area-inset-top));background:rgba(10,16,24,.7);border:1px solid #2a3a4a;border-radius:8px;padding:8px 10px;text-align:right}
+#mm{position:fixed;right:10px;top:84px;width:110px;height:120px;background:rgba(5,10,16,.6);border:1px solid #2a3a4a;border-radius:6px}
+#msg{left:50%;top:30%;transform:translateX(-50%);max-width:66vw;font-size:19px;text-shadow:0 0 8px #000;opacity:0;transition:opacity .4s;text-align:center}
+.b{position:fixed;width:64px;height:64px;border-radius:50%;background:rgba(20,30,42,.75);border:2px solid #5a7a96;color:#fff;font:14px NG,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1}
+.b.on{background:rgba(70,140,90,.85);border-color:#9ef0b0}
+#bFire{right:max(18px,env(safe-area-inset-right));bottom:max(26px,env(safe-area-inset-bottom));width:84px;height:84px;font-size:16px}
+#bDodge{right:calc(max(18px,env(safe-area-inset-right)) + 96px);bottom:max(26px,env(safe-area-inset-bottom))}
+#bSkill{right:calc(max(18px,env(safe-area-inset-right)) + 10px);bottom:calc(max(26px,env(safe-area-inset-bottom)) + 96px)}
+#bAuto{left:10px;top:112px;width:56px;height:56px}
+#stick{position:fixed;left:max(24px,env(safe-area-inset-left));bottom:max(30px,env(safe-area-inset-bottom));width:120px;height:120px;border-radius:50%;border:2px solid rgba(120,150,180,.5);background:rgba(20,30,42,.35)}
+#knob{position:absolute;left:40px;top:40px;width:40px;height:40px;border-radius:50%;background:rgba(160,200,230,.7)}
+#help{left:10px;bottom:6px;font-size:11px;color:#8aa0b4}
+body:not(.touch) #stick,body:not(.touch) #bFire,body:not(.touch) #bDodge,body:not(.touch) #bSkill{display:none}
+body.touch #help{display:none}
+@media (max-height:450px){#mm{width:88px;height:96px;top:68px}}
+#flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,0,0,0) 45%,rgba(255,30,30,.55) 100%);opacity:0;transition:opacity .25s}
+#xp{margin-top:4px;color:#e8d38a}
+#ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,6,10,.72);z-index:5}#ov.on{display:flex}
+#ovb{background:rgba(14,22,32,.96);border:1px solid #4a6a86;border-radius:12px;padding:20px 24px;text-align:center;max-width:80vw}
+#ovb h2{margin:0 0 10px;font-size:22px}#ovb p{margin:4px 0;font-size:14px;color:#b8c8d8;line-height:1.4}
+#ovbtn{margin-top:14px;display:inline-block;padding:12px 28px;border-radius:24px;background:#3d8a5a;border:2px solid #9ef0b0;color:#fff;font:17px NG,sans-serif}
+
+#bBuild{position:fixed;left:76px;top:122px;z-index:3;padding:10px 14px;background:#142432;color:#dfe8f0;border:1px solid #71899a;border-radius:8px;font:14px NG,sans-serif;min-height:44px}
+#buildPanel{display:none;position:fixed;inset:0;z-index:10;background:rgba(1,5,10,.85);align-items:center;justify-content:center;padding:12px;box-sizing:border-box;touch-action:pan-x pan-y}
+#buildPanel.on{display:flex}#buildCard{width:840px;max-width:100%;max-height:96%;overflow-y:auto;background:#101e2b;border:1px solid #7193aa;border-radius:12px;padding:18px;box-sizing:border-box;touch-action:pan-x pan-y}
+#buildCard h2{margin:0 0 8px}#buildCard p{font-size:13px;color:#b8cbd8;line-height:1.5}#buildCard button{font:14px NG,sans-serif;color:#fff;background:#29465a;border:1px solid #86a9b9;border-radius:6px;min-height:44px;padding:8px 12px;cursor:pointer}#buildCard button:disabled{opacity:.42;cursor:default}
+#buildHead{display:flex;justify-content:space-between;gap:10px;align-items:center}#buildTree{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.buildBranch{border:1px solid #3d5869;padding:12px;border-radius:8px}.buildNode{margin-top:14px;padding-top:10px;border-top:1px solid #324958}.buildNode p{min-height:40px}.buildNode button{width:100%}#buildActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#buildNotice{color:#ecd48f!important}#saveState{font-size:11px;color:#98b8c8;margin-top:4px}
+@media(max-width:580px){#buildTree{grid-template-columns:1fr}#buildCard{padding:14px}.buildNode p{min-height:0}#buildHead h2{font-size:19px}}
+
+.treeFork{margin-left:10px;border-left:2px solid #416c82;padding-left:10px}.treeEnd{margin-left:26px;border-left:2px solid #68b6a0;padding-left:10px}.treeFork strong:before,.treeEnd strong:before{content:"↳ ";color:#86d6be}.treeRoot{background:#1b3445;padding:10px;border-radius:6px}#weaponBar,#activeBar{position:fixed;z-index:3;display:flex;gap:5px;left:50%;transform:translateX(-50%)}#weaponBar{bottom:72px}#activeBar{bottom:15px}#weaponBar button,#activeBar button{background:#142432ef;color:#e6f1fb;border:1px solid #628397;border-radius:8px;padding:8px;min-width:66px;min-height:44px;font:12px NG,sans-serif;touch-action:manipulation}#weaponBar button.selected{border:2px solid #8ef4bf;background:#254738}#activeBar button:disabled{opacity:.45}#skillLoadout,#gearLoadout{display:flex;gap:8px;flex-wrap:wrap}.equipCard{background:#172d3d;padding:10px;flex:1;min-width:180px;border-radius:8px}.equipCard select{width:100%;min-height:44px;background:#213c4d;color:#fff;font:14px NG,sans-serif}.buildNode .equipToggle{margin-top:6px;background:#214a40}#buildCard .buildBranch h3{position:sticky;top:-18px;background:#101e2b;padding:10px 0}.buildNode small{color:#f3d18c;display:block;margin-top:5px}
+@media(max-width:600px){#weaponBar,#activeBar{left:8px;transform:none;gap:3px}#weaponBar{bottom:206px}#activeBar{bottom:154px}#weaponBar button,#activeBar button{font-size:11px;min-width:60px;padding:5px}.equipCard{min-width:150px}#top{font-size:11px;min-width:0;width:calc(100vw - 165px);max-width:225px;box-sizing:border-box}#zone{max-width:135px;box-sizing:border-box}#zone{font-size:11px}#mm{top:92px;width:85px;height:93px}}
+
+#buildTree{display:block}.buildBranch{touch-action:pan-x pan-y;margin:20px 0;padding:14px;overflow-x:auto}.treeDiagram{width:max-content;min-width:100%;box-sizing:border-box}.treePaths{width:max-content;margin:0 auto;display:flex;gap:14px;min-width:max-content;padding-top:24px;position:relative}.treePaths:before{content:'';position:absolute;top:12px;left:100px;right:100px;height:2px;background:#6596a6}.skillPath{width:210px;position:relative}.skillPath:before{content:'';position:absolute;top:-12px;left:50%;height:14px;width:2px;background:#6596a6}.diagramRoot{width:210px;box-sizing:border-box;margin:0 auto!important;position:relative}.diagramRoot:after{content:'';position:absolute;bottom:-14px;left:50%;height:14px;width:2px;background:#6596a6}.treeFork,.treeEnd{margin-left:0;border:1px solid #416c82;padding:10px;border-radius:7px}.treeFork{margin-top:0}.treeEnd{margin-top:24px;position:relative;background:#173b39;border-color:#68b6a0}.treeEnd:before{content:'↓';position:absolute;top:-24px;left:47%;height:24px;color:#9cdbc7;font-size:20px}.treeFork strong:before,.treeEnd strong:before{content:''}.buildBranch h3{position:static!important}.buildNode p{min-height:46px}.skillPath .buildNode small{min-height:35px}.treeRoot p{min-height:0}#operationSetup{display:flex;flex-wrap:wrap;gap:8px}#operationSetup>p{width:100%}#operationSetup label{display:flex;flex-direction:column;gap:8px;margin-bottom:8px}#gearLoadout select{margin-bottom:8px}
+@media(max-width:580px){.diagramRoot{position:sticky;left:0;z-index:1}.skillPath{width:196px}.diagramRoot{margin-left:0!important}.buildBranch{padding:10px}.treePaths:before{left:98px;right:98px}.diagramRoot:after{left:98px}}
+.treeNav{display:flex;gap:8px;position:sticky;left:0;margin-bottom:12px}.treeNav button{min-width:110px}
+</style></head><body>
+<button id="bBuild" type="button">빌드 · B</button><div id="buildPanel" role="dialog" aria-modal="true" aria-labelledby="buildTitle"><section id="buildCard"><div id="buildHead"><h2 id="buildTitle">빌드 준비</h2><button id="buildClose" type="button">닫기</button></div><p id="buildSummary"></p><p id="buildNotice"></p><div id="buildActions"><button data-preset="총기" type="button">총기 추천</button><button data-preset="생존" type="button">생존 추천</button><button data-preset="드론" type="button">드론 추천</button><button id="buildReset" type="button">무료 초기화</button></div><p id="buildPreview"></p><button id="buildApply" type="button" hidden>추천 배분 적용</button><h3>준비 거점 · 작전 선택</h3><div id="operationSetup"></div><h3>장착 액티브 · 최대 3개</h3><div id="skillLoadout"></div><h3>종류별 무기 장비</h3><div id="gearLoadout"></div><p>정규 작전은 일반 난도에서 8~12분을 목표로 조정 중입니다. 숙련도와 빌드에 따라 달라지며 보장 시간이 아닙니다.</p><p>연결선은 필수 선행입니다. 분기 트리는 좌우로 밀어 다른 경로를 볼 수 있습니다. 교차 시너지는 선행 조건이 아닙니다. 급탄→터렛 속도, 기동→산탄 밀치기, 표적→관통탄 추가 피해.</p><div id="buildTree"></div><p>총기·생존·드론 자유 혼합. 패시브 3단계, 액티브 1단계. 선행 1단계가 필요합니다. 액티브는 배운 뒤 준비 구역에서 장착. 드론 최대 2기 + 터렛 1개. 종류별 무기는 항상 보급품부터 사용 가능. 수치는 검증 중입니다.</p><p id="saveNotice">성장과 던전 진행을 이 브라우저에 자동 저장합니다. 다른 기기와 동기화되지 않습니다.</p><button id="returnBase" type="button">던전 포기 · 준비 구역으로</button><p>획득 XP와 빌드는 유지됩니다. 미완주 구역과 보상은 다시 도전해야 합니다.</p></section></div><div id="weaponBar"></div><div id="activeBar"></div><canvas id="c"></canvas>
+<div class="hud" id="top"><div id="hpt">체력 100/100</div><div id="hpbar"><div id="hp"></div></div><div id="gunname" style="margin-top:6px;color:#9fb4c6">소총 (샘플)</div><div id="xp">XP 0</div><div id="saveState">저장 준비 중</div></div><div id="flash"></div><div id="ov"><div id="ovb"><h2 id="ovh"></h2><p id="ovp"></p><div id="ovbtn">다시 입장</div></div></div>
+<div class="hud" id="zone"><div id="zt">구역 0/0</div><div id="et">적 0 남음</div><div style="margin-top:4px;color:#7f95a8;font-size:11px">자동 회피 시험판 · 본판 저장과 별도</div></div>
+<canvas id="mm" width="110" height="120"></canvas>
+<div class="hud" id="msg"></div>
+<div id="stick"><div id="knob"></div></div>
+<div class="b on" id="bAuto">자동<br>OFF</div><div class="b" id="bDodge">회피<br>Space</div><div class="b" id="bFire">공격<br>J</div>
+<div class="hud" id="help">WASD 이동 · 클릭/J 사격 · Space 회피 · 1/2/3 총기 · Q/E/R 스킬 · T 자동</div>
+<script type="importmap">{"imports":{"three":"./three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';import {OBJLoader} from './OBJLoader.js';import {MTLLoader} from './MTLLoader.js';
+import {generateDungeon} from './dgen.mjs';
+const SAVE_KEY='grid-breach-auto-lab-v1';
+const node=(id,branch,name,detail,requires=null,active=false,weapon=null)=>({id,branch,name,detail,requires,active,weapon,max:active?1:3});
+const NODES=[
+ node('fire','총기','사격 기본기','총기 피해 +8%/단계'),
+ node('precision','총기','정밀 조준','소총 탄퍼짐 감소·연속 명중 강화','fire'),node('rifleShot','총기','집중 관통탄','소총 전환 후 직선 관통 사격 · 7초','precision',true,'rifle'),
+ node('scatter','총기','산탄 제어','산탄 집중·근접 피해 +8%/단계','fire'),node('shotgunBlast','총기','돌파 산탄','샷건 전환 후 밀쳐내는 산탄 · 8초','scatter',true,'shotgun'),
+ node('feed','총기','급탄 숙련','기관총 연속 사격 안정·터렛 속도 지원','fire'),node('suppress','총기','제압 난사','기관총 전환 후 3초 제압 사격 · 10초','feed',true,'machinegun'),
+ node('stance','생존','전투 태세','최대 체력 +15/단계'),node('mobile','생존','기동 숙련','회피 대기시간 -10%/단계','stance'),node('counter','생존','회피 반격','짧은 회피 후 다음 사격 강화 · 6초','mobile',true),
+ node('cover','생존','엄폐 숙련','정지 중 받는 피해 감소·방호 강화','stance'),node('guard','생존','방호 전개','5초 동안 위치를 지키면 피해 감소 · 12초','cover',true),
+ node('control','드론','드론 제어','지원 범위 +2/단계'),node('target','드론','표적 분석','표식 사격 추가 피해·관통탄 시너지','control'),node('attackDrone','드론','추적 드론','12초 동안 이동·공격·표식 · 16초','target',true),
+ node('firstaid','드론','응급 처치','회복 드론의 회복량 증가','control'),node('healDrone','드론','회복 드론','10초 동안 제한된 지속 회복 · 20초','firstaid',true),
+ node('output','드론','출력 조율','증폭 드론의 사격 준비 지원 강화','control'),node('buffDrone','드론','증폭 드론','10초 동안 사격 간격 단축 · 18초','output',true),
+ node('jam','드론','전자 교란','교란 감속 강화·강적에게 효과 감소','control'),node('debuffDrone','드론','교란 드론','10초 동안 주변 적 감속 · 18초','jam',true),
+ node('platform','드론','고정 플랫폼','터렛 피해 증가','control'),node('turret','드론','제압 터렛','고정 위치에서 12초 사격 · 18초','platform',true)
+];
+const WEAPONS={rifle:{name:'소총',damage:10,interval:.18,spread:.035,pellets:1,range:30},shotgun:{name:'샷건',damage:7,interval:.7,spread:.3,pellets:6,range:12},machinegun:{name:'기관총',damage:5,interval:.075,spread:.12,pellets:1,range:25}};
+function levelFor(xp){let level=1;while(level<25&&xp>=100*level*(level+1)/2)level++;return level}
+function pointsFor(xp){return 3+levelFor(xp)-1}
+function usedPoints(b){return NODES.reduce((a,n)=>a+(b[n.id]||0),0)}
+function cleanBuild(v,xp){const b={};let used=0;for(const n of NODES){let r=Math.max(0,Math.min(n.max,Math.floor(Number(v?.[n.id])||0)));if(n.requires&&!b[n.requires])r=0;b[n.id]=Math.min(r,Math.max(0,pointsFor(xp)-used));used+=b[n.id]}return b}
+function cleanSlots(v,b){const seen=new Set();let drones=0;return Array.from({length:3},(_,i)=>{const id=Array.isArray(v)?v[i]:'';if(!NODES.some(n=>n.id===id&&n.active)||!b[id]||seen.has(id)||id.endsWith('Drone')&&drones>=2)return '';seen.add(id);if(id.endsWith('Drone'))drones++;return id})}
+function recommend(xp,branch){const b=cleanBuild({},xp);let left=pointsFor(xp);const paths={총기:['fire','precision','rifleShot','stance','mobile','counter','control','target','attackDrone'],생존:['stance','mobile','counter','cover','guard','fire','scatter','shotgunBlast'],드론:['control','target','attackDrone','firstaid','healDrone','platform','turret','fire','feed']};const order=[...paths[branch],...NODES.map(n=>n.id)];for(const id of order){const n=NODES.find(n=>n.id===id);if(left&&b[id]===0&&(!n.requires||b[n.requires])){b[id]=1;left--}}for(const n of NODES){const add=Math.min(n.max-b[n.id],left);if(!n.requires||b[n.requires]){b[n.id]+=add;left-=add}}return b}
+function stats(b){return {damage:1+.08*b.fire,rate:1,hp:100+15*b.stance,heal:0,dodge:1-.1*b.mobile,drone:0,range:12+2*b.control,droneRate:1,link:2*b.target,pierce:0}}
+function cleanGear(v){const a={};for(const type of Object.keys(WEAPONS)){const g=v?.[type];a[type]={type,attachment:['sight','brake','feed'].includes(g?.attachment)?g.attachment:'none',upgrade:Math.max(0,Math.min(3,Math.floor(+g?.upgrade||0))),tier:Math.max(0,Math.min(20,Math.floor(+g?.tier||0))),option:['damage','speed','focus'].includes(g?.option)?g.option:'damage'}}return a}
+function unpack(raw){const a=JSON.parse(raw);if(![3,4].includes(a?.version)||!Number.isFinite(a.xp)||a.xp<0||a.xp>1e9)throw Error('invalid save');a.xp=Math.floor(a.xp);if(a.version===3){a.build={};a.slots=[];a.migrated=true}a.build=cleanBuild(a.build,a.xp);a.slots=cleanSlots(a.slots,a.build);a.gear=cleanGear(a.gear);a.loot=(Array.isArray(a.loot)?a.loot:[]).filter(g=>g&&Object.keys(WEAPONS).includes(g.type)).slice(-24).map(g=>cleanGear({[g.type]:g})[g.type]);a.weapon=Object.keys(WEAPONS).includes(a.weapon)?a.weapon:'rifle';if(a.run&&(!Array.isArray(a.run.rooms)||!Array.isArray(a.run.enemies)||!Number.isFinite(a.run.x)||!Number.isFinite(a.run.z)))a.run=null;return a}
+
+let loaded=null,saveError='',saveRecovered=false;try{const raw=localStorage.getItem(SAVE_KEY);if(raw){try{loaded=unpack(raw);if(loaded.migrated&&!localStorage.getItem(SAVE_KEY+'-legacy-v3'))localStorage.setItem(SAVE_KEY+'-legacy-v3',raw)}catch(e){const backup=localStorage.getItem(SAVE_KEY+'-backup');if(backup){loaded=unpack(backup);saveRecovered=true}else saveError='저장을 읽지 못했습니다. 새 진행을 자동 덮어쓰지 않습니다.'}}}catch(e){saveError='저장 공간에 접근할 수 없습니다. 이 탭을 닫으면 진행이 사라집니다.'}
+
+const P=new URLSearchParams(location.search);const SEED=+(P.get('seed')||loaded?.run?.seed||1337),NR=+(P.get('rooms')||loaded?.run?.roomCount||25);
+let runRules=loaded?.run?.rulesVersion||(loaded?.run?1:2);
+const OPERATIONS={breach:{name:'돌파',detail:'균형 편성 2회. 마지막 보스까지 돌파',count:0,hp:1},swarm:{name:'방어망 소탕',detail:'연속 증원. 사방 압박과 자원 파밍',count:-2,hp:.8},hunt:{name:'정예 추적',detail:'적 수는 적지만 정예 호위. 우선순위 판단',count:-3,hp:1.5}};let operation=OPERATIONS[loaded?.operation]?loaded.operation:'breach',difficulty=Math.max(0,Math.min(2,loaded?.difficulty||0)),unlocked=Math.max(0,Math.min(2,loaded?.unlocked||0)),salvage=Math.max(0,Math.floor(loaded?.salvage||0));
+const T=4,R=0.45;const ZM=+(P.get('zoom')||1);
+const d=generateDungeon({seed:SEED,roomCount:NR,themeKey:'frost',loopChance:0.1,decorDensity:0});
+const W=d.W,H=d.H,idx=(x,y)=>y*W+x;
+const $=id=>document.getElementById(id);
+const TOUCH=P.get('touch')?true:(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window);document.body.classList.toggle('touch',TOUCH);
+const cv=$('c');const rd=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(devicePixelRatio,1.5));
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x070b10);sc.fog=new THREE.Fog(0x070b10,38,80);
+sc.add(new THREE.HemisphereLight(0xb8c8dc,0x3a3d44,2.4));const dl=new THREE.DirectionalLight(0xffeedd,2.2);dl.position.set(-10,24,8);sc.add(dl);
+const cam=new THREE.PerspectiveCamera(38,1,1,200);
+function resize(){rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+// ---- map
+const floorTiles=[],wallTiles=[];const isF=(x,y)=>x>=0&&y>=0&&x<W&&y<H&&d.grid[idx(x,y)]===1;
+for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(isF(x,y)){floorTiles.push([x,y]);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isF(x+dx,y+dy)&&!d.doorway[idx(x,y)])wallTiles.push([x+dx,y+dy])}
+const wallSet=[...new Set(wallTiles.map(([x,y])=>x+','+y))].map(s=>s.split(',').map(Number));
+const fm=new THREE.InstancedMesh(new THREE.BoxGeometry(T,.4,T),new THREE.MeshStandardMaterial({color:0x2c3846,roughness:.9}),floorTiles.length);
+const m4=new THREE.Matrix4();floorTiles.forEach(([x,y],i)=>{m4.makeTranslation(x*T,-.2,y*T);fm.setMatrixAt(i,m4);const c=new THREE.Color().setHSL(.58,.12,.30+(((x+y)%2)?.05:0)+((x*7+y*13)%5)*.012);fm.setColorAt(i,c)});sc.add(fm);
+const wm=new THREE.InstancedMesh(new THREE.BoxGeometry(T,1.3,T),new THREE.MeshStandardMaterial({color:0x7a8ca2,roughness:.8}),wallSet.length);
+wallSet.forEach(([x,y],i)=>{m4.makeTranslation(x*T,.65,y*T);wm.setMatrixAt(i,m4)});sc.add(wm);
+const locked=new Set();const barriers=new Map();const cover=new Map();
+const cellOf=v=>Math.round(v/T);
+const walk=(wx,wz)=>{const cx=cellOf(wx),cy=cellOf(wz);return cx>=0&&cy>=0&&cx<W&&cy<H&&d.grid[idx(cx,cy)]===1&&!locked.has(idx(cx,cy))&&!cover.has(idx(cx,cy))};
+const free=(x,z,r)=>walk(x-r,z-r)&&walk(x+r,z-r)&&walk(x-r,z+r)&&walk(x+r,z+r);
+// ---- rooms
+const rooms=d.rooms;const ent=rooms.find(r=>r.type==='entrance')||rooms[0];
+const rs=rooms.map(r=>({r,cleared:r.type==='entrance',active:false,enemies:[]}));
+rs.forEach(o=>{o.empty=o.r.type!=='entrance'&&o.r.id!==d.boss&&o.r.type!=='boss'&&!d.spawns.some(s=>s.roomId===o.r.id);if(o.empty)o.cleared=true});
+const fightRooms=rs.filter(o=>!o.cleared);const emptyN=rs.filter(o=>o.empty).length;
+function roomCells(id){const a=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(d.roomId[idx(x,y)]===id&&d.grid[idx(x,y)]===1)a.push([x,y]);return a}
+rs.forEach(o=>{o.cells=roomCells(o.r.id);const s=new Set(o.cells.map(([x,y])=>idx(x,y)));o.doors=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=idx(x,y);if(!d.doorway[i])continue;if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>x+dx>=0&&y+dy>=0&&x+dx<W&&y+dy<H&&s.has(idx(x+dx,y+dy))))o.doors.push(i)}});
+// ---- cover objects (crates & low walls): block movement and bullets
+{
+ let s0=(SEED^0x9e3779b9)>>>0;const rnd=()=>((s0=(s0*1664525+1013904223)>>>0)/4294967296);
+ const passable=o=>{const cells=o.cells.filter(([x,y])=>!cover.has(idx(x,y)));if(!cells.length)return false;
+  const set=new Set(cells.map(([x,y])=>idx(x,y)));const q=[idx(cells[0][0],cells[0][1])];const seen=new Set(q);
+  for(let h=0;h<q.length;h++){const c=q[h],x=c%W,y=(c-x)/W;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const n=idx(x+dx,y+dy);if(set.has(n)&&!seen.has(n)){seen.add(n);q.push(n)}}}
+  return seen.size===set.size};
+ for(const o of rs){
+  if(o.r.type==='entrance'||o.empty)continue;
+  const cand=o.cells.filter(([x,y])=>{
+   if(o.doors.some(di=>{const dx2=di%W,dy2=(di-dx2)/W;return Math.abs(dx2-x)+Math.abs(dy2-y)<=1}))return false;
+   if(Math.hypot(x-o.r.cx,y-o.r.cy)<1.8)return false;return true});
+  for(let i=cand.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=cand[i];cand[i]=cand[j];cand[j]=t}
+  const boss=o.r.type==='boss'||o.r.id===d.boss;
+  const want=Math.min(boss?2:4,Math.max(boss?1:2,Math.round(cand.length/12)));
+  let placed=0;
+  for(const [x,y] of cand){if(placed>=want)break;const ii=idx(x,y);
+   let adj=false;for(const k of cover.keys()){const kx=k%W,ky=(k-kx)/W;if(Math.abs(kx-x)+Math.abs(ky-y)<=1){adj=true;break}}
+   if(adj)continue;
+   cover.set(ii,'x');if(!passable(o)){cover.delete(ii);continue}
+   cover.set(ii,rnd()<.55?'crate':'low');placed++}
+ }
+ for(const [ii,ty] of cover){const x=ii%W,y=(ii-x)/W;
+  const m=ty==='crate'?new THREE.Mesh(new THREE.BoxGeometry(2.3,1.9,2.3),new THREE.MeshStandardMaterial({color:0x8a6f4d,roughness:.85})):new THREE.Mesh(new THREE.BoxGeometry(3.3,1.05,3.3),new THREE.MeshStandardMaterial({color:0x97a1a8,roughness:.95}));
+  m.position.set(x*T,ty==='crate'?.95:.55,y*T);sc.add(m)}
+}
+// ---- actors
+const mk=(col,h,r=.4)=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CapsuleGeometry(r,h-2*r,4,8),new THREE.MeshStandardMaterial({color:col,roughness:.7}));b.position.y=h/2;g.add(b);return g};
+const pl=mk(0x3b5c4a,1.8,.42);sc.add(pl);const face=new THREE.Mesh(new THREE.BoxGeometry(.5,.18,.3),new THREE.MeshStandardMaterial({color:0x111,emissive:0x2a6a8a}));face.position.set(0,1.55,.3);pl.add(face);
+const gunPivot=new THREE.Group();gunPivot.position.set(-.2,1.12,0);pl.add(gunPivot);
+const skin=new THREE.MeshStandardMaterial({color:0x2b3b33,roughness:.8});const limb=(a,b)=>{const v=new THREE.Vector3().subVectors(b,a),L=v.length();const m=new THREE.Mesh(new THREE.CylinderGeometry(.09,.08,L,6),skin);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());pl.add(m)};
+limb(new THREE.Vector3(-.34,1.4,0),new THREE.Vector3(-.2,1.1,.42));limb(new THREE.Vector3(.34,1.4,0),new THREE.Vector3(-.2,1.12,.95));
+const flashM=new THREE.Mesh(new THREE.SphereGeometry(.16,6,6),new THREE.MeshBasicMaterial({color:0xffd060}));flashM.position.set(-.2,1.12,1.35);flashM.visible=false;pl.add(flashM);
+const S={hp:100,hpMax:100,x:ent.cx*T,z:ent.cy*T,face:0,dash:0,dashCd:0,fireCd:0,skillCd:0,burst:0,auto:false,xp:0,reward:0,kills:0,deaths:0,t:0,over:false,hitFlash:0};
+// progression and storage
+let build=cleanBuild(loaded?.build,loaded?.xp||0),buildStats=stats(build),panelOpen=false,proposal=null,saveClock=0;
+let slots=cleanSlots(loaded?.slots,build),gear=cleanGear(loaded?.gear),loot=loaded?.loot||[],weapon=loaded?.weapon||'rifle',cooldowns=loaded?.cooldowns||{},effects=loaded?.effects||{},switchAt=0,manualUntil=0,stillTime=0,precisionHits=0,fireHeld=0;
+S.xp=loaded?.xp||0;S.hpMax=buildStats.hp;S.hp=S.hpMax;S.kills=loaded?.kills||0;S.deaths=loaded?.deaths||0;
+const droneVisual=mk(0x4eabb5,.5,.2);sc.add(droneVisual);let droneCd=0;
+function atBase(){return !rs.some(o=>o.active&&!o.cleared)&&d.roomId[idx(cellOf(S.x),cellOf(S.z))]===ent.id&&!S.over}
+function safeToSpend(){return !rs.some(o=>o.active&&!o.cleared)&&!S.over}
+function applyStats(){const old=S.hpMax;buildStats=stats(build);S.hpMax=buildStats.hp;S.hp=Math.min(S.hpMax,S.hp+Math.max(0,S.hpMax-old))}
+function makeSave(){return {version:4,xp:S.xp,build,slots,gear,loot,weapon,cooldowns,effects,operation,difficulty,unlocked,salvage,kills:S.kills,deaths:S.deaths,run:{seed:SEED,roomCount:NR,rulesVersion:runRules,x:S.x,z:S.z,hp:S.hp,t:S.t,runStart:S.runStart||0,reward:S.reward,won:!!S.won,over:!!S.over,ovKind:S.ovKind||'',rooms:rs.map(o=>({id:o.r.id,cleared:o.cleared,active:o.active,wave:o.wave||0})),enemies:enemies.map(e=>({roomId:e.room.r.id,kind:e.kind,elite:!!e.elite,x:e.x,z:e.z,hp:e.hp})),locked:[...locked]}}}
+function saveGame(){if(saveError)return false;try{const old=localStorage.getItem(SAVE_KEY);if(old){try{unpack(old);localStorage.setItem(SAVE_KEY+'-backup',old)}catch(e){}}localStorage.setItem(SAVE_KEY,JSON.stringify(makeSave()));$('saveState').textContent='자동 저장됨 · 이 브라우저';return true}catch(e){saveError='저장에 실패했습니다. 이 탭을 닫지 마세요.';$('saveState').textContent=saveError;return false}}
+function renderOperations(outside){const root=$('operationSetup');root.replaceChildren();const info=document.createElement('p');info.textContent='편성 규칙 '+(runRules===2?'확장 실험':'기존 진행')+' · '+fightRooms.length+'개 전투 구역 · 장비 부품 '+salvage+' · 구역 완료/완주로 획득 · 강화 최대3 · 보관24개 초과 시 가장 오래된 장비 자동 분해 · 현금 결제 없음';root.append(info);const fresh=document.createElement('button');fresh.type='button';fresh.textContent='새 정규 작전 · 25구역 시작';fresh.disabled=!outside;fresh.onclick=()=>{if(!atBase())return;const a=makeSave();a.run=null;try{localStorage.setItem(SAVE_KEY+'-before-new-run',localStorage.getItem(SAVE_KEY)||'');localStorage.setItem(SAVE_KEY,JSON.stringify(a));saveError='새 작전 전환 중';location.href=location.pathname+'?build=pacing2-'+Date.now()+(TOUCH?'&touch=1':'')}catch(e){msg('새 작전 저장 실패: 현재 진행 유지')}};root.append(fresh);for(const [id,title,options,value] of [['op','작전',Object.entries(OPERATIONS).map(([id,v])=>[id,v.name+' · '+v.detail]),operation],['diff','난도',[['0','일반'],['1','상위 I · 정예 추가'],['2','상위 II · 정예 강화']],String(difficulty)]]){const label=document.createElement('label');label.textContent=title;label.className='equipCard';const sel=document.createElement('select');sel.setAttribute('aria-label',title);for(const [key,name] of options){const opt=new Option(name,key);if(id==='diff'&&+key>unlocked){opt.disabled=true;opt.text+=' (앞 난도 완주 필요)'}sel.add(opt)}sel.value=value;sel.disabled=!outside;sel.onchange=()=>{if(!atBase())return;if(id==='op')operation=sel.value;else if(+sel.value<=unlocked)difficulty=+sel.value;resetDungeon();saveGame();renderBuild()};label.append(sel);root.append(label)}}
+let bossRing=null;
+function bossTactics(e,dt){if(!bossRing){bossRing=new THREE.Mesh(new THREE.RingGeometry(3.2,3.5,32),new THREE.MeshBasicMaterial({color:0xff9c45,transparent:true,opacity:.7,side:THREE.DoubleSide}));bossRing.rotation.x=-Math.PI/2;sc.add(bossRing)}const phase=e.hp<e.hpMax*.5?2:1;e.specialCd=(e.specialCd??3)-dt;if(e.specialCd<=0&&!e.telegraph){e.telegraph={x:S.x,z:S.z,until:S.t+1.1};e.specialCd=phase===2?4:6;msg(phase===2?'보스 격노 · 주황 원에서 이탈!':'보스 집중 공격 · 원에서 이탈!')}if(e.telegraph){bossRing.visible=true;bossRing.position.set(e.telegraph.x,.14,e.telegraph.z);bossRing.scale.setScalar(phase===2?1.3:1);if(S.t>=e.telegraph.until){if(Math.hypot(S.x-e.telegraph.x,S.z-e.telegraph.z)<3.5*(phase===2?1.3:1))hurt(22*(1+.2*difficulty));e.telegraph=null;bossRing.visible=false}}else bossRing.visible=false}
+
+function renderBuild(){const outside=atBase(),safe=safeToSpend(),left=pointsFor(S.xp)-usedPoints(build);
+ $('buildSummary').textContent='레벨 '+levelFor(S.xp)+' · XP '+S.xp+' · 남은 포인트 '+left+' / '+pointsFor(S.xp);
+ $('buildNotice').textContent=outside?'준비 구역: 무료 초기화 · 장비와 액티브 교체 가능':safe?'안전 구역: 새 포인트만 배분 가능. 장착 교체·초기화는 준비 구역에서만.':'전투 중 일시 정지: 투자·장착 변경 불가';
+ renderOperations(outside);$('skillLoadout').replaceChildren();for(let i=0;i<3;i++){const card=document.createElement('div');card.className='equipCard';const title=document.createElement('p');title.textContent='스킬 '+['Q','E','R'][i];const sel=document.createElement('select');sel.setAttribute('aria-label','스킬 '+(i+1));sel.add(new Option('빈 슬롯',''));for(const n of NODES.filter(n=>n.active&&build[n.id]))sel.add(new Option(n.name,n.id));sel.value=slots[i]||'';sel.disabled=!outside;sel.onchange=()=>{if(!atBase())return;let next=slots.slice();next[i]=sel.value;next=cleanSlots(next,build);if(next.filter(id=>id.endsWith('Drone')).length>2){msg('이동 드론은 최대 2기');renderBuild();return}slots=next;effects={};saveGame();renderBuild()};card.append(title,sel);$('skillLoadout').append(card)}
+ $('gearLoadout').replaceChildren();for(const type of Object.keys(WEAPONS)){const card=document.createElement('div');card.className='equipCard';const title=document.createElement('p');title.textContent=WEAPONS[type].name+' · '+gearName(gear[type]);const sel=document.createElement('select');sel.setAttribute('aria-label',WEAPONS[type].name+' 장비');sel.add(new Option('현재: '+gearName(gear[type]),''));loot.forEach((g,i)=>{if(g.type===type)sel.add(new Option(gearName(g),String(i)))});sel.disabled=!outside;sel.onchange=()=>{if(!atBase()||sel.value==='')return;const i=+sel.value;if(!loot[i]||loot[i].type!==type)return;const old=gear[type];gear[type]=loot[i];loot.splice(i,1);if(old.tier>0||old.upgrade>0||old.attachment&&old.attachment!=='none')loot.push(old);saveGame();renderBuild()};card.append(title,sel);const at=document.createElement('select');at.setAttribute('aria-label',WEAPONS[type].name+' 부착물');for(const [id,name] of Object.entries({none:'부착 없음',sight:'조준경 · 집중 +20%',brake:'제동기 · 피해 +10% / 속사 -8%',feed:'급탄기 · 사격 간격 -8%'}))at.add(new Option(name,id));at.value=gear[type].attachment||'none';at.disabled=!outside;at.onchange=()=>{if(!atBase())return;gear[type].attachment=at.value;saveGame();renderBuild()};const up=document.createElement('button');const cost=10+5*(gear[type].upgrade||0);up.textContent='강화 +'+(gear[type].upgrade||0)+' / 3 · 부품 '+cost;up.disabled=!outside||(gear[type].upgrade||0)>=3||salvage<cost;up.onclick=()=>{const g=gear[type],c=10+5*(g.upgrade||0);if(!atBase()||(g.upgrade||0)>=3||salvage<c)return;salvage-=c;g.upgrade=(g.upgrade||0)+1;saveGame();renderBuild()};card.append(at,up);$('gearLoadout').append(card)}
+ $('buildTree').replaceChildren();for(const branch of ['총기','생존','드론']){const col=document.createElement('section');col.className='buildBranch';const h=document.createElement('h3');h.textContent=branch;col.append(h);const nav=document.createElement('div');nav.className='treeNav';for(const [label,dx] of [['← 이전 경로',-210],['다음 경로 →',210]]){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>{col.scrollBy({left:dx,behavior:'smooth'})};nav.append(b)}col.append(nav);const diagram=document.createElement('div');diagram.className='treeDiagram';const paths=document.createElement('div');paths.className='treePaths';const pathMap={};for(const n of NODES.filter(n=>n.branch===branch)){const node=document.createElement('div');node.className='buildNode '+(!n.requires?'treeRoot':n.active?'treeEnd':'treeFork');const name=document.createElement('strong');name.textContent=(n.active?'액티브 · ':'패시브 · ')+n.name+' '+build[n.id]+'/'+n.max;const desc=document.createElement('p');desc.textContent=n.detail;const req=document.createElement('small');req.textContent=n.requires?'선행: '+NODES.find(q=>q.id===n.requires).name+' 1단계'+(build[n.requires]?' ✓':''):'공통 시작점';const b=document.createElement('button');b.textContent=build[n.id]>=n.max?'최대 단계':'포인트 +1';b.type='button';b.disabled=!safe||left<=0||build[n.id]>=n.max||!!(n.requires&&!build[n.requires]);b.onclick=()=>{if(!safeToSpend()||pointsFor(S.xp)<=usedPoints(build)||build[n.id]>=n.max||n.requires&&!build[n.requires])return;build[n.id]++;proposal=null;applyStats();saveGame();renderBuild()};node.append(name,desc,req,b);if(!n.requires){node.classList.add('diagramRoot');diagram.append(node)}else if(!n.active){const path=document.createElement('div');path.className='skillPath';pathMap[n.id]=path;path.append(node);paths.append(path)}else{pathMap[n.requires].append(node)}}diagram.append(paths);col.append(diagram);$('buildTree').append(col)}
+ document.querySelectorAll('[data-preset]').forEach(b=>b.disabled=!outside);$('buildReset').disabled=!outside;$('buildApply').hidden=!proposal;$('buildPreview').textContent=proposal?'추천안: '+NODES.filter(n=>proposal[n.id]).map(n=>n.name+' '+proposal[n.id]).join(' · '):'';$('saveNotice').textContent=saveError||(loaded?.migrated?'이전 9특성 투자를 미사용 포인트로 반환했습니다. XP·획득 장비·진행 유지. ':'')+'이 브라우저에 자동 저장. 다른 기기와 동기화되지 않음.';
+}
+function gearName(g){return g.tier?'현장 T'+g.tier+' +'+(g.upgrade||0)+' · '+({damage:'화력',speed:'속사',focus:'집중'}[g.option]):'기본 보급품 +'+(g.upgrade||0)}
+function openBuild(){panelOpen=true;proposal=null;keysClear();$('buildPanel').classList.add('on');renderBuild();$('buildClose').focus()}
+function closeBuild(){panelOpen=false;proposal=null;$('buildPanel').classList.remove('on');last=performance.now();$('bBuild').focus()}
+function keysClear(){for(const k in keys)keys[k]=0;mouse.down=false;btnFire=false;stick.x=stick.y=0;kn.style.left='40px';kn.style.top='40px'}
+$('bBuild').onclick=openBuild;$('buildClose').onclick=closeBuild;
+$('buildReset').onclick=()=>{if(!atBase())return;build=cleanBuild({},S.xp);slots=[];effects={};proposal=null;applyStats();saveGame();renderBuild()};
+document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{if(!atBase())return;proposal=recommend(S.xp,b.dataset.preset);renderBuild()});
+$('buildApply').onclick=()=>{if(!atBase()||!proposal)return;build=cleanBuild(proposal,S.xp);slots=cleanSlots(NODES.filter(n=>n.active&&build[n.id]).map(n=>n.id),build);effects={};proposal=null;applyStats();saveGame();renderBuild()};
+let abandonConfirm=false;$('returnBase').onclick=()=>{if(!atBase()&&!abandonConfirm){abandonConfirm=true;$('returnBase').textContent='확인: 진행 포기하고 준비 구역으로';return}abandonConfirm=false;$('returnBase').textContent='던전 포기 · 준비 구역으로';resetDungeon();S.over=false;S.ovKind='';$('ov').classList.remove('on');saveGame();renderBuild()};
+addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden){keysClear();saveGame()}});
+// gun
+const gunUrl="./";let gunLoaded=false,gunInfo=null;
+new MTLLoader().setPath(gunUrl).load('AssaultRifle2_1.mtl',mt=>{mt.preload();const l=new OBJLoader();l.setMaterials(mt);l.setPath(gunUrl).load('AssaultRifle2_1.obj',o=>{
+ o.traverse(m=>{if(m.isMesh){(Array.isArray(m.material)?m.material:[m.material]).forEach(t=>{t.emissive=new THREE.Color(0x4a5866)})}});const g=new THREE.Group();g.add(o);const bb=new THREE.Box3().setFromObject(g);const sz=bb.getSize(new THREE.Vector3());
+ // long axis -> +Z
+ const ax=sz.x>sz.z?'x':'z';if(ax==='x')g.rotation.y=-Math.PI/2;g.updateMatrixWorld(true);
+ const b2=new THREE.Box3().setFromObject(g);const s2=b2.getSize(new THREE.Vector3());const k=1.35/Math.max(s2.x,s2.z);g.scale.setScalar(k);g.updateMatrixWorld(true);
+ const b3=new THREE.Box3().setFromObject(g);const c=b3.getCenter(new THREE.Vector3());const w=new THREE.Group();w.add(g);g.position.set(-c.x,-c.y,-c.z);w.position.z=.62;
+ w.rotation.y=P.get('flip')?Math.PI:0;gunPivot.add(w);gunLoaded=true;gunInfo={sz:sz.toArray(),ax}})});
+// ---- enemies / bullets
+const enemies=[],bullets=[],ebul=[];
+const bGeo=new THREE.BoxGeometry(.07,.07,.9);const bMat=new THREE.MeshBasicMaterial({color:0xffe060});const eMat=new THREE.MeshBasicMaterial({color:0xff5030});
+function spawnEnemy(o,x,z,kind,elite=false){const ranged=kind==='shooter',boss=kind==='boss';const g=mk(boss?0x7a2a2a:ranged?0xa05a20:0x8a2a2a,boss?3:1.8,boss?.9:.42);g.position.set(x,0,z);sc.add(g);
+ const hpbar=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.14),new THREE.MeshBasicMaterial({color:0xff4040,depthTest:false}));hpbar.position.y=boss?3.6:2.3;hpbar.renderOrder=9;g.add(hpbar);
+ const HP=(boss?1200:ranged?50:80)*(1+difficulty*.35)*OPERATIONS[operation].hp*(elite?1.6:1);const e={g,elite,hpbar,room:o,kind,x,z,hp:HP,hpMax:HP,r:boss?.9:.45,sp:(boss?2.7:ranged?2.6:4.8)*(elite?1.15:1),cd:Math.random()*1.2,cd2:3,hit:0,xp:boss?120:ranged?15:10};if(elite){g.children[0].material.color.setHex(0xbb55dd);e.xp*=2;e.r*=1.08}enemies.push(e);o.enemies.push(e);return e}
+function activate(o){o.active=true;o.wave=o.wave||0;const sp=d.spawns.filter(s=>s.roomId===o.r.id&&!cover.has(idx(s.x,s.y)));const okc=o.cells.filter(([cx,cy])=>!cover.has(idx(cx,cy)));const n=Math.max(3,(runRules===2?4:5)+Math.round((o.r.difficulty||0.5)*3)+OPERATIONS[operation].count+difficulty);if(runRules===2){msg('편성 '+(o.wave+1)+'/'+(operation==='swarm'?3:2))}
+ for(let i=0;i<n;i++){let x,z;const far=okc.filter(([cx,cy])=>Math.hypot(cx*T-S.x,cy*T-S.z)>11);if(i<sp.length&&Math.hypot(sp[i].x*T-S.x,sp[i].y*T-S.z)>9){x=sp[i].x*T;z=sp[i].y*T}else{const c=(far.length?far:okc)[Math.floor(Math.random()*(far.length||okc.length))];x=c[0]*T;z=c[1]*T}spawnEnemy(o,x+(Math.random()-.5),z+(Math.random()-.5),i%3===2?'shooter':'grunt',(operation==='hunt'&&i===0)||(difficulty>0&&i%(difficulty===2?3:4)===0))}
+ if((o.r.type==='boss'||o.r.id===d.boss)&&!o.wave){const c=okc[Math.floor(okc.length/2)];spawnEnemy(o,c[0]*T,c[1]*T,'boss')}
+ if(!o.enemies.length){clearRoom(o);return}
+ for(const i of o.doors){if(i===idx(cellOf(S.x),cellOf(S.z))||locked.has(i))continue;locked.add(i);const x=i%W,y=(i-x)/W;const m=new THREE.Mesh(new THREE.BoxGeometry(T,2.6,T),new THREE.MeshBasicMaterial({color:0xff3030,transparent:true,opacity:.35}));m.position.set(x*T,1.3,y*T);sc.add(m);barriers.set(i,m)}
+ msg('구역 봉쇄 · 적을 전멸시키면 길이 열립니다')}
+function clearRoom(o){const waves=runRules===2?(operation==='swarm'?3:2):(operation==='swarm'?2:1);if((o.wave||0)<waves-1){o.wave=(o.wave||0)+1;if(runRules===2)S.hp=Math.min(S.hpMax,S.hp+6);activate(o);msg('증원 '+(o.wave+1)+'/'+waves+' · 교전 위치 변경');return}salvage+=8+4*difficulty;S.hp=Math.min(S.hpMax,S.hp+buildStats.heal+(runRules===2?18:0));o.cleared=true;const types=Object.keys(WEAPONS),type=types[(S.kills+o.r.id)%3],g={type,tier:Math.max(1,Math.min(20,levelFor(S.xp))),option:['damage','speed','focus'][(o.r.id+S.deaths)%3]};loot.push(g);if(loot.length>24){const old=loot.shift();salvage+=5+(old.tier||0)*2;}for(const i of o.doors){locked.delete(i);const m=barriers.get(i);if(m){sc.remove(m);barriers.delete(i)}}
+ const n=rs.filter(q=>q.cleared&&!q.empty&&q.r.type!=='entrance').length,N=fightRooms.length;msg(n>=N?'모든 구역 돌파! 완주 보상 지급':'구역 클리어 · '+WEAPONS[type].name+' 획득 · 길 개방 '+n+'/'+N);if(n>=N&&!S.won){S.won=true;S.reward+=200;salvage+=20+10*difficulty;unlocked=Math.max(unlocked,Math.min(2,difficulty+1));S.winT=1.6}saveGame()}
+let msgT=0;function msg(t){const e=$('msg');e.textContent=t;e.style.opacity=1;clearTimeout(msgT);msgT=setTimeout(()=>e.style.opacity=0,2200)}
+// ---- input
+const keys={};addEventListener('keydown',e=>{if(e.code==='KeyB'){e.preventDefault();if(!e.repeat)(panelOpen?closeBuild():openBuild());return}if(e.code==='Escape'&&panelOpen){closeBuild();return}if(panelOpen)return;keys[e.code]=1;if(e.code==='KeyT')toggleAuto();if(e.code==='Space'){S.wantDash=1;e.preventDefault()}if(['Digit1','Digit2','Digit3'].includes(e.code))switchWeapon(Object.keys(WEAPONS)[+e.code.slice(-1)-1],true);if(['KeyQ','KeyE','KeyR'].includes(e.code)&&!e.repeat)S.wantActive=['KeyQ','KeyE','KeyR'].indexOf(e.code)});addEventListener('keyup',e=>keys[e.code]=0);
+let mouse={x:0,y:0,down:false,moved:0};cv.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'){mouse.x=e.clientX;mouse.y=e.clientY;mouse.moved=performance.now()}});
+cv.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){mouse.down=true}});addEventListener('pointerup',()=>mouse.down=false);
+const stick={x:0,y:0,id:null,cx:0,cy:0};const st=$('stick'),kn=$('knob');
+function stickMove(e){const r=st.getBoundingClientRect();const cx=r.left+60,cy=r.top+60;let dx=e.clientX-cx,dy=e.clientY-cy;const L=Math.hypot(dx,dy),M=50;if(L>M){dx*=M/L;dy*=M/L}stick.x=dx/M;stick.y=dy/M;kn.style.left=40+dx+'px';kn.style.top=40+dy+'px'}
+st.addEventListener('pointerdown',e=>{stick.id=e.pointerId;st.setPointerCapture(e.pointerId);stickMove(e)});st.addEventListener('pointermove',e=>{if(e.pointerId===stick.id)stickMove(e)});
+const stEnd=e=>{if(e.pointerId===stick.id){stick.id=null;stick.x=stick.y=0;kn.style.left='40px';kn.style.top='40px'}};st.addEventListener('pointerup',stEnd);st.addEventListener('pointercancel',stEnd);
+let btnFire=false;const bF=$('bFire');bF.addEventListener('pointerdown',e=>{btnFire=true;bF.setPointerCapture(e.pointerId)});bF.addEventListener('pointerup',()=>btnFire=false);bF.addEventListener('pointercancel',()=>btnFire=false);
+$('bDodge').addEventListener('pointerdown',()=>S.wantDash=1);
+function toggleAuto(){S.auto=!S.auto;const b=$('bAuto');b.innerHTML='자동<br>'+(S.auto?'ON':'OFF');b.classList.toggle('on',S.auto)}
+$('bAuto').addEventListener('pointerdown',toggleAuto);addEventListener('keydown',e=>{if(e.code==='KeyJ')btnFire=true});addEventListener('keyup',e=>{if(e.code==='KeyJ')btnFire=false});
+if(P.get('auto'))toggleAuto();
+// ---- helpers
+function nearest(){let b=null,bd=1e9;for(const e of enemies){const dd=Math.hypot(e.x-S.x,e.z-S.z);if(dd<bd){bd=dd;b=e}}return[b,bd]}
+function losBlocked(x0,z0,x1,z1){const d0=Math.hypot(x1-x0,z1-z0),n=Math.max(1,Math.ceil(d0/.6));for(let k=1;k<n;k++){const wx=x0+(x1-x0)*k/n,wz=z0+(z1-z0)*k/n;const cx=cellOf(wx),cy=cellOf(wz);if(cx<0||cy<0||cx>=W||cy>=H)return true;const ii=idx(cx,cy);if(d.grid[ii]!==1||cover.has(ii)||locked.has(ii))return true}return false}
+const ray=new THREE.Raycaster(),pln=new THREE.Plane(new THREE.Vector3(0,1,0),-1);
+function mouseAim(){const v=new THREE.Vector2(mouse.x/innerWidth*2-1,-(mouse.y/innerHeight)*2+1);ray.setFromCamera(v,cam);const p=new THREE.Vector3();if(ray.ray.intersectPlane(pln,p))return Math.atan2(p.x-S.x,p.z-S.z);return null}
+let shotPierce=1,shotLife=.5,shotBoost=1;
+function switchWeapon(type,manual=false){if(!WEAPONS[type]||panelOpen||S.over)return false;if(type!==weapon){if(S.t<switchAt)return false;weapon=type;gunPivot.scale.set(type==='shotgun'?1.2:type==='machinegun'?1.35:1,1,type==='shotgun'?.75:1);switchAt=S.t+.3;precisionHits=0;fireHeld=0;S.fireCd=Math.max(S.fireCd,.15)}if(manual)manualUntil=S.t+2;return true}
+function fireWeapon(a,special=false){const w=WEAPONS[weapon],g=gear[weapon];shotPierce=1;shotLife=w.range/60;shotBoost=(1+g.tier*.05)*(g.option==='damage'?1+.02*g.tier:1);if(effects.counter?.until>S.t){shotBoost*=1.6+.08*build.mobile;delete effects.counter}shotBoost*=1+.08*(g.upgrade||0);if(g.attachment==='brake')shotBoost*=1.1;let spread=w.spread*(g.option==='focus'?.75:1)*(g.attachment==='sight'?.8:1),damage=w.damage;
+ if(weapon==='rifle'){spread/=1+.4*build.precision;shotBoost*=1+.01*build.precision*precisionHits;if(special){shotPierce=5;shotBoost*=3.5+.1*build.target}}
+ if(weapon==='shotgun'){spread/=1+.08*build.scatter;shotBoost*=1+.08*build.scatter;if(special){shotBoost*=1.5;for(const e of enemies)if(Math.hypot(e.x-S.x,e.z-S.z)<10&&!losBlocked(S.x,S.z,e.x,e.z)){const ang=Math.atan2(e.x-S.x,e.z-S.z);if(Math.abs(Math.atan2(Math.sin(ang-a),Math.cos(ang-a)))<.65){const dx=Math.sin(ang)*(2+.4*build.mobile),dz=Math.cos(ang)*(2+.4*build.mobile);if(free(e.x+dx,e.z+dz,e.r)){e.x+=dx;e.z+=dz}e.slowUntil=S.t+1}}}}
+ if(weapon==='machinegun'){spread/=1+Math.min(3,fireHeld)*.15*build.feed;if(effects.suppress?.until>S.t){shotBoost*=1.3;for(const e of enemies)if(Math.hypot(e.x-S.x,e.z-S.z)<16&&!losBlocked(S.x,S.z,e.x,e.z))e.slowUntil=S.t+.5}}
+ for(let i=0;i<w.pellets;i++)shoot(a,damage,spread);shotBoost=1;shotPierce=1;shotLife=.5;
+}
+function useSkill(i,a,tn){const id=slots[i],n=NODES.find(n=>n.id===id);if(panelOpen||S.over||!n||!build[id]||(cooldowns[id]||0)>S.t)return false;const aim=a??(tn?Math.atan2(tn.x-S.x,tn.z-S.z):S.face);if(n.weapon){if(n.weapon==='shotgun'&&tn&&Math.hypot(tn.x-S.x,tn.z-S.z)>12)return false;if(!switchWeapon(n.weapon))return false;if(id==='rifleShot'){fireWeapon(aim,true);S.fireCd=Math.max(S.fireCd,.3);cooldowns[id]=S.t+7}else if(id==='shotgunBlast'){fireWeapon(aim,true);S.fireCd=Math.max(S.fireCd,.7);cooldowns[id]=S.t+8}else{effects.suppress={until:S.t+3};cooldowns[id]=S.t+10}}
+ else if(id==='counter'){S.wantDash=1;effects.counter={until:S.t+3};cooldowns[id]=S.t+6}
+ else if(id==='guard'){effects.guard={until:S.t+5,x:S.x,z:S.z};cooldowns[id]=S.t+12}
+ else{if(id.endsWith('Drone')&&!effects[id]&&Object.entries(effects).filter(([k,v])=>k.endsWith('Drone')&&v.until>S.t).length>=2)return false;const duration=id==='attackDrone'||id==='turret'?12:10;effects[id]={until:S.t+duration,x:S.x,z:S.z,next:0};cooldowns[id]=S.t+({attackDrone:16,healDrone:20,buffDrone:18,debuffDrone:18,turret:18}[id]||18)}saveGame();return true}
+const supportVisuals={};for(const [id,col] of Object.entries({attackDrone:0x42cce0,healDrone:0x55ee88,buffDrone:0xffdd55,debuffDrone:0xcc77ff,turret:0xee9960,guard:0x6699dd})){const mesh=new THREE.Mesh(id==='guard'?new THREE.RingGeometry(1.6,1.8,24):new THREE.BoxGeometry(id==='turret'?.8:.45,id==='turret'?.7:.3,.6),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.85,side:THREE.DoubleSide}));if(id==='guard')mesh.rotation.x=-Math.PI/2;sc.add(mesh);mesh.visible=false;supportVisuals[id]=mesh}
+function updateSupport(dt){let k=0;for(const [id,m] of Object.entries(supportVisuals)){const e=effects[id];m.visible=!!e&&e.until>S.t;if(!m.visible)continue;if(id.endsWith('Drone')){e.x=S.x+Math.cos(k*2+S.t)*1.5;e.z=S.z+Math.sin(k*2+S.t)*1.5;k++}m.position.set(e.x,id==='guard'?.1:id==='turret'?.5:2.2,e.z);if(id==='debuffDrone'){for(const t of enemies)if(Math.hypot(t.x-e.x,t.z-e.z)<buildStats.range&&!losBlocked(e.x,e.z,t.x,t.z))t.slowUntil=S.t+.3}if((e.next||0)>S.t)continue;
+ if(id==='healDrone'){S.hp=Math.min(S.hpMax,S.hp+(2+build.firstaid)*(1+.03*build.stance));e.next=S.t+1}
+ if(id==='attackDrone'||id==='turret'){const target=enemies.filter(t=>Math.hypot(t.x-e.x,t.z-e.z)<buildStats.range&&!losBlocked(e.x,e.z,t.x,t.z)).sort((a,b)=>Math.hypot(a.x-e.x,a.z-e.z)-Math.hypot(b.x-e.x,b.z-e.z))[0];if(target){target.hp-=id==='turret'?8+3*build.platform:5+2*build.target;target.hit=.15;if(id==='attackDrone')target.marked=3;e.next=S.t+(id==='turret'?.8*(1-.07*build.feed):1)}}}
+ for(const id of Object.keys(effects))if(effects[id].until<=S.t)delete effects[id];droneVisual.visible=false;
+}
+const weaponButtons={},activeButtons=[];Object.entries(WEAPONS).forEach(([id,w],i)=>{const b=document.createElement('button');b.type='button';b.textContent=(i+1)+' '+w.name;b.onclick=()=>switchWeapon(id,true);$('weaponBar').append(b);weaponButtons[id]=b});for(let i=0;i<3;i++){const b=document.createElement('button');b.type='button';b.onclick=()=>S.wantActive=i;$('activeBar').append(b);activeButtons.push(b)}
+function renderCombatHUD(){for(const [id,b] of Object.entries(weaponButtons))b.classList.toggle('selected',weapon===id);for(let i=0;i<3;i++){const id=slots[i],n=NODES.find(n=>n.id===id),left=Math.max(0,Math.ceil((cooldowns[id]||0)-S.t));activeButtons[i].textContent=['Q','E','R'][i]+' '+(n?n.name:'빈 칸')+(left?' '+left+'초':'');activeButtons[i].disabled=!n||left>0}const w=WEAPONS[weapon];$('gunname').textContent=w.name+' · '+gearName(gear[weapon]);}
+
+function shoot(ang,dmg=8,spread=.03){dmg*=buildStats.damage;S.mf=.05;const a=ang+(Math.random()-.5)*spread*2;const m=new THREE.Mesh(bGeo,bMat);const dx=Math.sin(a),dz=Math.cos(a);m.position.set(S.x+dx*1.2,1.2,S.z+dz*1.2);m.rotation.y=a;sc.add(m);bullets.push({m,dx,dz,life:shotLife,dmg:dmg*shotBoost,left:shotPierce,hitIds:new Set(),x:m.position.x,z:m.position.z})}
+function eshoot(e){const a=Math.atan2(S.x-e.x,S.z-e.z);const m=new THREE.Mesh(new THREE.SphereGeometry(.18),eMat);m.position.set(e.x,1.2,e.z);sc.add(m);ebul.push({m,dx:Math.sin(a),dz:Math.cos(a),life:2.2,x:e.x,z:e.z})}
+function hurt(n){if(S.dash>0||S.over)return;if(stillTime>.7)n*=1-.06*build.cover;if(effects.guard?.until>S.t&&Math.hypot(S.x-effects.guard.x,S.z-effects.guard.z)<2)n*=.5-.04*build.cover;S.hp-=n;S.dmgTaken=(S.dmgTaken||0)+n;S.hitFlash=.15;{const f=$('flash');f.style.opacity=1;clearTimeout(S.ft);S.ft=setTimeout(()=>f.style.opacity=0,180)}if(S.hp<=0)S.pendDie=1}
+function resetDungeon(){S.runStart=S.t;if(bossRing)bossRing.visible=false;S.hp=S.hpMax;S.x=ent.cx*T;S.z=ent.cy*T;S.dash=0;S.burst=0;effects={};precisionHits=0;for(const e of enemies)sc.remove(e.g);enemies.length=0;for(const o of rs){o.enemies=[];o.active=false;o.wave=0;if(!o.empty&&o.r.type!=='entrance')o.cleared=false}for(const i of [...locked])locked.delete(i);for(const [i,m] of barriers)sc.remove(m);barriers.clear();for(const b of ebul)sc.remove(b.m);ebul.length=0;for(const b of bullets)sc.remove(b.m);bullets.length=0;S.won=false;S.winT=0;S.pendDie=0}
+function showOv(kind){S.over=true;S.ovKind=kind;const o=$('ov');o.classList.add('on');const runTime=S.t-(S.runStart||0),m=Math.floor(runTime/60),sec=Math.floor(runTime%60);
+ if(kind==='dead'){$('ovh').textContent='쓰러졌습니다';$('ovp').innerHTML='던전 처음부터 다시 도전합니다.<br>획득 XP '+S.xp+' 유지 · 처치 '+S.kills+' · 사망 '+S.deaths+'회<br>완주 보상은 던전을 끝까지 클리어해야 지급됩니다.';$('ovbtn').textContent='다시 입장'}
+ else{$('ovh').textContent='던전 완주!';$('ovp').innerHTML='완주 보상 +200 · 부품 지급<br>'+OPERATIONS[operation].name+' · '+['일반','상위 I','상위 II'][difficulty]+' 완주<br>누적 XP '+S.xp+' · 처치 '+S.kills+' · 사망 '+S.deaths+'회 · 플레이 '+m+'분 '+sec+'초<br>(작전 완주 · 거점에서 다음 도전 준비)';$('ovbtn').textContent='새로 시작'}}
+function reenter(){if(!S.over)return;$('ov').classList.remove('on');resetDungeon();S.over=false;openBuild();saveGame();msg(S.ovKind==='dead'?'던전 처음부터 재입장 (XP 유지)':'새 던전 시작')}
+$('ovbtn').addEventListener('pointerdown',reenter);addEventListener('keydown',e=>{if(S.over&&(e.code==='Enter'||e.code==='Space')){reenter();e.preventDefault()}});
+function die(){S.deaths++;(S.dlog=S.dlog||[]).push(((rs.find(o=>o.active&&!o.cleared)||{r:{type:'none'}}).r.type));resetDungeon();showOv('dead');saveGame()}
+// BFS toward target room for auto
+function bfsDir(tx,ty){const sx=cellOf(S.x),sy=cellOf(S.z);const prev=new Int32Array(W*H).fill(-2);const q=[idx(sx,sy)];prev[q[0]]=-1;let found=-1;
+ for(let h=0;h<q.length;h++){const c=q[h],x=c%W,y=(c-x)/W;if(x===tx&&y===ty){found=c;break}for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=W||ny>=H)continue;const n=idx(nx,ny);if(prev[n]!==-2||d.grid[n]!==1||locked.has(n)||cover.has(n)||!free(nx*T,ny*T,R)||!free((x+nx)*T/2,(y+ny)*T/2,R))continue;prev[n]=c;q.push(n)}}
+ if(found<0)return null;let c=found,path=[];while(c!==-1){path.push(c);c=prev[c]}path.reverse();const nxt=path[Math.min(1,path.length-1)],nx=nxt%W,ny=Math.floor(nxt/W);if((nx!==sx&&Math.abs(S.z-sy*T)>.35)||(ny!==sy&&Math.abs(S.x-sx*T)>.35))return[sx*T,sy*T];return[nx*T,ny*T]}
+let autoTargetId=null;
+function nextTarget(){let rem=fightRooms.filter(o=>!o.cleared);if(runRules===2&&rem.some(o=>o.r.type!=='boss'&&o.r.id!==d.boss))rem=rem.filter(o=>o.r.type!=='boss'&&o.r.id!==d.boss);if(!rem.length){autoTargetId=null;return null}const selected=rem.find(o=>o.r.id===autoTargetId);if(selected)return selected;let b=null,bd=1e9;for(const o of rem){const dd=Math.hypot(o.r.cx*T-S.x,o.r.cy*T-S.z);if(dd<bd){bd=dd;b=o}}autoTargetId=b?.r.id;return b}
+// ---- loop
+let last=performance.now();const mmc=$('mm').getContext('2d');
+function mapDraw(){mmc.clearRect(0,0,110,120);const sx=110/W,sy=120/H;mmc.fillStyle='#2a3948';for(const[x,y] of floorTiles)mmc.fillRect(x*sx,y*sy,Math.max(1,sx),Math.max(1,sy));mmc.fillStyle='#8a7452';for(const ii of cover.keys()){const cx2=ii%W,cy2=(ii-cx2)/W;mmc.fillRect(cx2*sx,cy2*sy,Math.max(2,sx),Math.max(2,sy))}for(const o of rs){mmc.fillStyle=o.r.type==='entrance'?'#58a':o.cleared?'#3a7':o.active?'#d44':'#a85';mmc.fillRect(o.r.cx*sx-2,o.r.cy*sy-2,4,4)}mmc.fillStyle='#fff';mmc.fillRect(S.x/T*sx-2,S.z/T*sy-2,4,4)}
+function step(dt){if(S.over||panelOpen)return;S.t+=dt;if(S.winT>0){S.winT-=dt;if(S.winT<=0)showOv('won')}
+ // zone activate
+ const ci=idx(cellOf(S.x),cellOf(S.z));const cr=d.roomId[ci];if(cr>=0&&!d.doorway[ci]){const o=rs.find(q=>q.r.id===cr);if(o&&!o.cleared&&!o.active&&[[-1,-1],[1,-1],[-1,1],[1,1]].every(([a,c])=>{const k=idx(cellOf(S.x+a*R),cellOf(S.z+c*R));return d.roomId[k]===cr&&!d.doorway[k]}))activate(o)}
+ let mx=0,mz=0,wantFire=btnFire||mouse.down,aimA=null;
+ const [tn,td]=nearest();
+ if(S.auto){const act=rs.find(o=>o.active&&!o.cleared);
+  if(tn&&act){const toE=Math.atan2(tn.x-S.x,tn.z-S.z);const k=td<7?-1:td>10?1:0;const sf=td<6?.1:.35;mx=Math.sin(toE)*k+Math.cos(toE)*sf*Math.sin(S.t*.9);mz=Math.cos(toE)*k-Math.sin(toE)*sf*Math.sin(S.t*.9);aimA=toE;wantFire=td<22;if(losBlocked(S.x,S.z,tn.x,tn.z)){const chase=bfsDir(cellOf(tn.x),cellOf(tn.z));if(chase){const cx=chase[0]-S.x,cz=chase[1]-S.z,cl=Math.hypot(cx,cz)||1;mx=cx/cl;mz=cz/cl}}if(td<4&&S.dashCd<=0)S.wantDash=1;
+   for(const b of ebul)if(Math.hypot(b.x-S.x,b.z-S.z)<2&&S.dashCd<=0){S.wantDash=1}const danger=enemies.find(e=>e.telegraph&&Math.hypot(S.x-e.telegraph.x,S.z-e.telegraph.z)<5);if(danger){const ax=S.x-danger.telegraph.x,az=S.z-danger.telegraph.z,ad=Math.hypot(ax,az);mx=ad>.1?ax/ad:Math.cos(toE);mz=ad>.1?az/ad:-Math.sin(toE);if(S.dashCd<=0)S.wantDash=1}}
+  else{const tr=nextTarget();if(tr){const t=bfsDir(tr.r.cx,tr.r.cy);if(t){mx=t[0]-S.x;mz=t[1]-S.z;const L=Math.hypot(mx,mz)||1;mx/=L;mz/=L}}}
+ }else{
+  mx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);mz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  // screen->world: camera looks along (-1,-1): right = (1,0,-1)/√2, down = (1,0,1)/√2
+  let sxv=mx+stick.x,syv=mz+stick.y;mx=(sxv+syv)*.7071;mz=(syv-sxv)*.7071;
+  if(wantFire){if(performance.now()-mouse.moved<4000&&mouse.moved){const a=mouseAim();if(a!==null)aimA=a}else if(tn&&td<22)aimA=Math.atan2(tn.x-S.x,tn.z-S.z)}
+  if(!wantFire&&tn&&td<22&&(mx||mz)===0)aimA=null}
+ if(S.auto&&(mx||mz)&&tn&&rs.some(o=>o.active&&!o.cleared)){const m0=Math.hypot(mx,mz),base=Math.atan2(mx,mz);let best=null,bs=-Infinity;for(const off of [0,.65,-.65,1.3,-1.3,2,-2,Math.PI]){const a2=base+off,nx=Math.sin(a2),nz=Math.cos(a2),px=S.x+nx*1.6,pz=S.z+nz*1.6;if(!free(px,pz,R)||!free(S.x+nx*.8,S.z+nz*.8,R))continue;let score=Math.cos(off)*1.4;for(const e of enemies){if(e.kind==='shooter')continue;const dist=Math.hypot(px-e.x,pz-e.z);score-=Math.max(0,5-dist)*2}if(score>bs){bs=score;best=[nx*m0,nz*m0]}}if(best){mx=best[0];mz=best[1]}}
+
+ const L=Math.hypot(mx,mz);if(L>1){mx/=L;mz/=L}
+ // dash
+ if(S.wantDash&&S.dashCd<=0){S.dash=.22;S.dashCd=1.1*buildStats.dodge;S.dd=[mx||Math.sin(S.face),mz||Math.cos(S.face)];const q=Math.hypot(...S.dd)||1;S.dd=[S.dd[0]/q,S.dd[1]/q]}S.wantDash=0;
+ let vx=mx*5.2,vz=mz*5.2;if(S.dash>0){vx=S.dd[0]*17;vz=S.dd[1]*17;S.dash-=dt}S.dashCd-=dt;
+ if(free(S.x+vx*dt,S.z,R))S.x+=vx*dt;if(free(S.x,S.z+vz*dt,R))S.z+=vz*dt;if(!free(S.x,S.z,R)){const ao=rs.find(q=>q.active&&!q.cleared)||rs.find(q=>d.roomId[idx(cellOf(S.x),cellOf(S.z))]===q.r.id);if(ao){const ux=ao.r.cx*T-S.x,uz=ao.r.cy*T-S.z,L=Math.hypot(ux,uz)||1;S.x+=ux/L*6*dt;S.z+=uz/L*6*dt}}
+ if(aimA!==null)S.face=aimA;else if(L>.1)S.face=Math.atan2(mx,mz);
+ // one equipped gun at a time; switching uses same rules in manual and auto
+ stillTime=(Math.hypot(mx,mz)<.1)?stillTime+dt:0;fireHeld=wantFire?fireHeld+dt:0;
+ if(S.auto&&S.t>manualUntil&&tn&&S.t>=switchAt){const ready=slots.map(id=>NODES.find(n=>n.id===id)).find(n=>n?.weapon&&(cooldowns[n.id]||0)<=S.t&&(n.weapon!=='shotgun'||td<10));switchWeapon(ready?.weapon||(td<8?'shotgun':td>17?'rifle':'machinegun'))}
+ if(S.auto&&tn){for(let i=0;i<slots.length;i++)if(slots[i]&&(cooldowns[slots[i]]||0)<=S.t){const id=slots[i];if((id!=='shotgunBlast'||td<10)&&(id!=='counter'||td<7||ebul.some(b=>Math.hypot(b.x-S.x,b.z-S.z)<4))&&(id!=='guard'||stillTime>.7)&&(id!=='healDrone'||S.hp<S.hpMax*.85)){useSkill(i,aimA,tn);break}}}
+ if(S.wantActive!==undefined){useSkill(S.wantActive,aimA,tn);S.wantActive=undefined}
+ S.fireCd-=dt;if(wantFire&&aimA!==null&&S.fireCd<=0&&S.t>=switchAt){fireWeapon(aimA);const w=WEAPONS[weapon],g=gear[weapon];S.fireCd=w.interval*(g.attachment==='feed'?.92:g.attachment==='brake'?1.08:1)*(1-(g.option==='speed'?.015*g.tier:0))*(effects.buffDrone?.until>S.t?.8-.02*build.output:1)}
+ updateSupport(dt);
+ // bullets
+ for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];let hit=false;
+  for(const e of enemies)if(!b.hitIds.has(e)&&Math.hypot(e.x-b.x,e.z-b.z)<e.r+.15){e.hp-=b.dmg+(e.marked>0?buildStats.link:0);if(weapon==='rifle')precisionHits=Math.min(10,precisionHits+1);e.hit=.1;b.hitIds.add(e);if(--b.left<=0){hit=true;break}}
+  const sp=60*Math.min(dt,b.life),n=Math.max(3,Math.ceil(sp/.4));for(let k=0;k<n&&!hit;k++){b.x+=b.dx*sp/n;b.z+=b.dz*sp/n;if(!walk(b.x,b.z)&&!locked.has(idx(cellOf(b.x),cellOf(b.z)))){hit=true;break}if(locked.has(idx(cellOf(b.x),cellOf(b.z)))){hit=true;break}
+   for(const e of enemies)if(!b.hitIds.has(e)&&Math.hypot(e.x-b.x,e.z-b.z)<e.r+.15){e.hp-=b.dmg+(e.marked>0?buildStats.link:0);if(weapon==='rifle')precisionHits=Math.min(10,precisionHits+1);e.hit=.1;b.hitIds.add(e);if(--b.left<=0){hit=true;break}}}
+  b.m.position.x=b.x;b.m.position.z=b.z;b.life-=dt;if(hit||b.life<=0){sc.remove(b.m);bullets.splice(i,1)}}
+ for(let i=ebul.length-1;i>=0;i--){const b=ebul[i];b.x+=b.dx*13*dt;b.z+=b.dz*13*dt;b.m.position.x=b.x;b.m.position.z=b.z;b.life-=dt;let rm=b.life<=0||!walk(b.x,b.z);if(Math.hypot(b.x-S.x,b.z-S.z)<R+.2){hurt((runRules===2?4:6)*(1+.2*difficulty));rm=true}if(rm){sc.remove(b.m);ebul.splice(i,1)}}
+ // enemies
+ for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];const dx=S.x-e.x,dz=S.z-e.z,dd=Math.hypot(dx,dz)||1;const los=!losBlocked(e.x,e.z,S.x,S.z);
+  let want=e.kind==='shooter'?(dd>11?1:dd<7?-.8:0):(dd>e.r+R+.1?1:0);if(e.kind==='boss')want=dd>3?1:0;
+  let vx=dx/dd*e.sp*want,vz=dz/dd*e.sp*want;
+  if(e.kind==='shooter'){
+   if(!los){e.noLosT=(e.noLosT||0)+dt;e.strafeT=(e.strafeT||0)-dt;
+    if(e.noLosT>2.2){vx=dx/dd*e.sp;vz=dz/dd*e.sp}
+    else{if(e.strafeT<=0){e.strafeT=.8+Math.random()*.8;const px=-dz/dd,pz=dx/dd,dir=Math.random()<.5?1:-1;const f1=free(e.x+px*dir*2.2,e.z+pz*dir*2.2,e.r);e.sx=px*(f1?dir:-dir);e.sz=pz*(f1?dir:-dir)}
+     vx=e.sx*e.sp;vz=e.sz*e.sp;if(dd>16){vx+=dx/dd*e.sp*.5;vz+=dz/dd*e.sp*.5}}
+   }else{e.noLosT=0;if(e.strafeT>0){e.strafeT-=dt;vx=e.sx*e.sp*.7;vz=e.sz*e.sp*.7}else if(Math.random()<dt*.4){e.strafeT=.5+Math.random()*.5;const px=-dz/dd,pz=dx/dd,dir=Math.random()<.5?1:-1;const f1=free(e.x+px*dir*2.2,e.z+pz*dir*2.2,e.r);e.sx=px*(f1?dir:-dir);e.sz=pz*(f1?dir:-dir)}}
+  }
+  if(e.slowUntil>S.t){const slow=e.kind==='boss'?.85:Math.max(.35,.65-.05*build.jam);vx*=slow;vz*=slow}
+  let emoved=false;
+  if(free(e.x+vx*dt,e.z,e.r)){e.x+=vx*dt;emoved=true}
+  if(free(e.x,e.z+vz*dt,e.r)){e.z+=vz*dt;emoved=true}
+  if(!emoved&&(vx||vz)){const sp0=Math.hypot(vx,vz),base=Math.atan2(vx,vz);
+   for(const off of [.7,-.7,1.4,-1.4,2.2,-2.2]){const nx=Math.sin(base+off)*sp0,nz=Math.cos(base+off)*sp0;
+    if(free(e.x+nx*dt,e.z,e.r)&&free(e.x,e.z+nz*dt,e.r)){e.x+=nx*dt;e.z+=nz*dt;emoved=true;break}}}
+  for(const q of enemies){if(q===e)continue;const ex=e.x-q.x,ez=e.z-q.z,ed=Math.hypot(ex,ez);if(ed<e.r+q.r&&ed>.01){const k=(e.r+q.r-ed)*.5;if(free(e.x+ex/ed*k,e.z,e.r))e.x+=ex/ed*k;if(free(e.x,e.z+ez/ed*k,e.r))e.z+=ez/ed*k}}
+  e.cd-=dt;if(e.kind==='shooter'&&e.cd<=0&&dd<20&&los){e.cd=1.5;eshoot(e)}
+  if(e.kind==='boss'){bossTactics(e,dt);e.cd2-=dt;if(e.cd2<=0){e.cd2=e.hp<e.hpMax*.5?3.5:5;const spokes=e.hp<e.hpMax*.5?12:8;for(let k=0;k<spokes;k++){const a=k/spokes*Math.PI*2;const m=new THREE.Mesh(new THREE.SphereGeometry(.2),eMat);m.position.set(e.x,1.2,e.z);sc.add(m);ebul.push({m,dx:Math.sin(a),dz:Math.cos(a),life:2.2,x:e.x,z:e.z})}}}
+  if(e.kind!=='shooter'&&dd<e.r+R+.35&&e.cd<=0){e.cd=e.kind==='boss'?1.2:.8;hurt((e.kind==='boss'?16:runRules===2?6:8)*(1+.2*difficulty)*(e.elite?1.2:1))}
+  e.g.position.set(e.x,0,e.z);e.g.rotation.y=Math.atan2(dx,dz);e.hit-=dt;e.marked=(e.marked||0)-dt;e.g.children[0].material.emissive?.setHex(e.hit>0?0x884444:0);e.hpbar.scale.x=Math.max(.01,e.hp/e.hpMax);e.hpbar.quaternion.copy(cam.quaternion);
+  if(e.hp<=0){if(e.kind==='boss'&&bossRing)bossRing.visible=false;sc.remove(e.g);enemies.splice(i,1);const o=e.room;o.enemies.splice(o.enemies.indexOf(e),1);S.kills++;const oldLevel=levelFor(S.xp);S.xp+=e.xp;if(levelFor(S.xp)>oldLevel){msg('레벨 업! 전투 후 빌드 포인트를 배분하세요');saveGame()}if(!o.enemies.length)clearRoom(o)}}
+ if(S.pendDie){S.pendDie=0;die()}
+ flashM.visible=(S.mf-=dt)>0;pl.position.set(S.x,0,S.z);pl.rotation.y=S.face;pl.children[0].material.emissive.setHex(S.hitFlash>0?0x883333:S.dash>0?0x335577:0);S.hitFlash-=dt;
+}
+function hud(){renderCombatHUD();{const tb=$('top').getBoundingClientRect();$('bAuto').style.top=Math.round(tb.bottom+8)+'px';$('bBuild').style.top=Math.round(tb.bottom+8)+'px'}$('xp').textContent='Lv.'+levelFor(S.xp)+' · XP '+S.xp+' · 포인트 '+(pointsFor(S.xp)-usedPoints(build))+(S.reward?' · 누적 완주 보상 '+S.reward:' · 완주 보상 대기');$('hpt').textContent='체력 '+Math.max(0,Math.ceil(S.hp))+'/'+S.hpMax;$('hp').style.width=Math.max(0,S.hp/S.hpMax*100)+'%';const n=rs.filter(q=>q.cleared&&!q.empty&&q.r.type!=='entrance').length;$('zt').textContent='구역 '+n+'/'+fightRooms.length;
+ const boss=enemies.find(e=>e.kind==='boss');$('zt').textContent=OPERATIONS[operation].name+' · '+['일반','상위 I','상위 II'][difficulty]+' · '+n+'/'+fightRooms.length;const act=rs.find(o=>o.active&&!o.cleared);$('et').textContent=boss?'보스 '+Math.ceil(boss.hp)+'/'+Math.ceil(boss.hpMax)+' · '+(boss.hp<boss.hpMax*.5?'격노':'경계'):act?'적 '+act.enemies.length+' 남음 · 전멸 시 길 개방':S.won?'샘플 종료':'다음 구역으로 이동';}
+// Fixed small simulation steps keep visible play close to elapsed time on slower devices.
+// Hidden time is paused, rather than charging damage while the player is away.
+let hudClock=0;
+addEventListener('visibilitychange',()=>{last=performance.now();if(document.hidden)saveGame()});
+function frame(now){const wallDt=Math.max(0,(now-last)/1000);last=now;
+ if(!document.hidden){const dt=Math.min(.25,wallDt),steps=Math.max(1,Math.ceil(dt/.025));for(let i=0;i<steps;i++)step(dt/steps);saveClock+=dt;hudClock+=dt;if(saveClock>=5){saveClock=0;saveGame()}cam.position.set(S.x+22*ZM,28*ZM,S.z+22*ZM);cam.lookAt(S.x,0,S.z);if(hudClock>=.1){hudClock=0;hud();mapDraw()}rd.render(sc,cam);window.__fps=(window.__fps||0)*.9+.1/Math.max(wallDt,.001)}requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+window.GB={free,R,locked,cover,losBlocked,bullets,ebul,dbg:()=>({btnFire,mDown:mouse.down,msx:mouse.x,msy:mouse.y,mmoved:mouse.moved,stk:[stick.x,stick.y]}),resetDungeon,reenter,S,d,rs,enemies,ent,T,step,proj(x,z){const v=new THREE.Vector3(x,1,z).project(cam);return[(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]},tpRoom(id){const o=rs.find(q=>q.r.id===id);S.x=o.r.cx*T;S.z=o.r.cy*T},gun:()=>({gunLoaded,gunInfo}),walk,fightRooms};
+// restore only matching map; invalid positions fail safely to preparation
+if(loaded?.run&&!P.has('seed')&&!P.has('rooms')){const r=loaded.run;try{for(const rec of r.rooms){const o=rs.find(q=>q.r.id===rec.id);if(o){o.cleared=!!rec.cleared;o.active=!!rec.active;o.wave=rec.wave||0}}for(const ii of r.locked||[]){if(!Number.isInteger(ii)||ii<0||ii>=W*H)continue;locked.add(ii);const m=new THREE.Mesh(new THREE.BoxGeometry(T,2.6,T),new THREE.MeshBasicMaterial({color:0xff3030,transparent:true,opacity:.35}));m.position.set(ii%W*T,1.3,Math.floor(ii/W)*T);sc.add(m);barriers.set(ii,m)}for(const rec of r.enemies){const o=rs.find(q=>q.r.id===rec.roomId);if(!o||!['grunt','shooter','boss'].includes(rec.kind)||!Number.isFinite(rec.x)||!Number.isFinite(rec.z)||!Number.isFinite(rec.hp)||rec.hp<=0)throw Error('enemy');const e=spawnEnemy(o,rec.x,rec.z,rec.kind,!!rec.elite);e.hp=Math.min(e.hpMax,rec.hp)}if(!free(r.x,r.z,R))throw Error('position');S.x=r.x;S.z=r.z;S.hp=Math.max(1,Math.min(S.hpMax,Number(r.hp)||S.hpMax));S.t=Math.max(0,Number(r.t)||0);S.runStart=Math.max(0,Number(r.runStart)||0);S.reward=Math.max(0,Number(r.reward)||0);S.won=!!r.won;if(r.over)showOv(r.ovKind==='dead'?'dead':'won');else if(S.won)S.winT=1;msg(saveRecovered?'백업 저장에서 복원했습니다':'저장된 진행을 복원했습니다')}catch(e){resetDungeon();msg('던전 복원 실패: 성장 유지, 준비 구역으로 복귀')}}
+$('saveState').textContent=saveError||'저장 준비됨 · 이 브라우저';
+window.GB.operations={get operation(){return operation},get difficulty(){return difficulty},get unlocked(){return unlocked},get salvage(){return salvage}};
+window.GB.loadout={get slots(){return [...slots]},get gear(){return structuredClone(gear)},get loot(){return structuredClone(loot)},get weapon(){return weapon},get effects(){return effects},get cooldowns(){return cooldowns},switchWeapon,useSkill,fireWeapon};
+window.GB.progression={get build(){return {...build}},get stats(){return {...buildStats}},saveGame,openBuild,closeBuild,atBase,safeToSpend};
+$('help').textContent=TOUCH?'':'WASD 이동 · 클릭/J 사격 · Space 회피 · 1/2/3 총기 · Q/E/R 스킬 · T 자동 · B 빌드';window.READY=1;
+</script></body></html>
