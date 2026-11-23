@@ -1,0 +1,5 @@
+Grid Breach first play sample (rough, placeholder shapes).
+- dgen.mjs: dungeon generator from majidmanzarpour/threejs-procedural-dungeon (MIT License, copyright held by its author; see the upstream repository LICENSE).
+- AssaultRifle2_1.obj/.mtl: Quaternius "Ultimate Gun Pack" (https://opengameart.org/content/low-poly-guns-pack). The OpenGameArt page states CC0; the zip has no license file.
+- three.module.js, three.core.js, MTLLoader.js, OBJLoader.js: three.js (MIT License).
+- ng.ttf: font file bundled with the earlier project, see repository ASSET-SOURCES.md.
