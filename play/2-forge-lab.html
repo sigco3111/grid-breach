@@ -1,0 +1,1564 @@
+<!doctype html>
+<!--
+Grid Breach Forge lab: generator adapted from Dungeon Forge / Patch Dungeons.
+Only the procedural generator is included. Existing Grid Breach combat/view retained.
+The lab uses separate browser storage (grid-breach-forge-lab-v1); main game saves are not read or written.
+Source: https://github.com/sigco3111/dungeon-forge-ko
+
+MIT License
+
+Copyright (c) 2026 Patch, and Majid Manzarpour for the parts of Dungeon Forge in src/ (see LICENSE-dungeon-forge.txt)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+MIT License
+
+Copyright (c) 2026 Majid Manzarpour
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-->
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Grid Breach - Forge 생성기 실험판</title>
+<style>
+@font-face{font-family:NG;src:url(ng.ttf)}
+html,body{margin:0;height:100%;background:#05080c;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:NG,sans-serif;color:#dfe8f0}
+canvas#c{position:fixed;inset:0;width:100%;height:100%}
+.hud{position:fixed;pointer-events:none;font-size:13px}
+#top{left:10px;top:max(10px,env(safe-area-inset-top));background:rgba(10,16,24,.7);border:1px solid #2a3a4a;border-radius:8px;padding:8px 10px;min-width:170px}
+#hpbar{height:8px;background:#222;border-radius:4px;margin-top:6px;overflow:hidden}#hp{height:100%;background:#5ccf7a;width:100%}
+#zone{right:10px;top:max(10px,env(safe-area-inset-top));background:rgba(10,16,24,.7);border:1px solid #2a3a4a;border-radius:8px;padding:8px 10px;text-align:right}
+#mm{position:fixed;right:10px;top:84px;width:110px;height:120px;background:rgba(5,10,16,.6);border:1px solid #2a3a4a;border-radius:6px}
+#msg{left:50%;top:30%;transform:translateX(-50%);max-width:66vw;font-size:19px;text-shadow:0 0 8px #000;opacity:0;transition:opacity .4s;text-align:center}
+.b{position:fixed;width:64px;height:64px;border-radius:50%;background:rgba(20,30,42,.75);border:2px solid #5a7a96;color:#fff;font:14px NG,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1}
+.b.on{background:rgba(70,140,90,.85);border-color:#9ef0b0}
+#bFire{right:max(18px,env(safe-area-inset-right));bottom:max(26px,env(safe-area-inset-bottom));width:84px;height:84px;font-size:16px}
+#bDodge{right:calc(max(18px,env(safe-area-inset-right)) + 96px);bottom:max(26px,env(safe-area-inset-bottom))}
+#bSkill{right:calc(max(18px,env(safe-area-inset-right)) + 10px);bottom:calc(max(26px,env(safe-area-inset-bottom)) + 96px)}
+#bAuto{left:10px;top:112px;width:56px;height:56px}
+#stick{position:fixed;left:max(24px,env(safe-area-inset-left));bottom:max(30px,env(safe-area-inset-bottom));width:120px;height:120px;border-radius:50%;border:2px solid rgba(120,150,180,.5);background:rgba(20,30,42,.35)}
+#knob{position:absolute;left:40px;top:40px;width:40px;height:40px;border-radius:50%;background:rgba(160,200,230,.7)}
+#help{left:10px;bottom:6px;font-size:11px;color:#8aa0b4}
+body:not(.touch) #stick,body:not(.touch) #bFire,body:not(.touch) #bDodge,body:not(.touch) #bSkill{display:none}
+body.touch #help{display:none}
+@media (max-height:450px){#mm{width:88px;height:96px;top:68px}}
+#flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,0,0,0) 45%,rgba(255,30,30,.55) 100%);opacity:0;transition:opacity .25s}
+#xp{margin-top:4px;color:#e8d38a}
+#ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,6,10,.72);z-index:5}#ov.on{display:flex}
+#ovb{background:rgba(14,22,32,.96);border:1px solid #4a6a86;border-radius:12px;padding:20px 24px;text-align:center;max-width:80vw}
+#ovb h2{margin:0 0 10px;font-size:22px}#ovb p{margin:4px 0;font-size:14px;color:#b8c8d8;line-height:1.4}
+#ovbtn{margin-top:14px;display:inline-block;padding:12px 28px;border-radius:24px;background:#3d8a5a;border:2px solid #9ef0b0;color:#fff;font:17px NG,sans-serif}
+
+#bBuild{position:fixed;left:76px;top:122px;z-index:3;padding:10px 14px;background:#142432;color:#dfe8f0;border:1px solid #71899a;border-radius:8px;font:14px NG,sans-serif;min-height:44px}
+#buildPanel{display:none;position:fixed;inset:0;z-index:10;background:rgba(1,5,10,.85);align-items:center;justify-content:center;padding:12px;box-sizing:border-box;touch-action:pan-y}
+#buildPanel.on{display:flex}#buildCard{width:840px;max-width:100%;max-height:96%;overflow-y:auto;background:#101e2b;border:1px solid #7193aa;border-radius:12px;padding:18px;box-sizing:border-box;touch-action:pan-y}
+#buildCard h2{margin:0 0 8px}#buildCard p{font-size:13px;color:#b8cbd8;line-height:1.5}#buildCard button{font:14px NG,sans-serif;color:#fff;background:#29465a;border:1px solid #86a9b9;border-radius:6px;min-height:44px;padding:8px 12px;cursor:pointer}#buildCard button:disabled{opacity:.42;cursor:default}
+#buildHead{display:flex;justify-content:space-between;gap:10px;align-items:center}#buildTree{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.buildBranch{border:1px solid #3d5869;padding:12px;border-radius:8px}.buildNode{margin-top:14px;padding-top:10px;border-top:1px solid #324958}.buildNode p{min-height:40px}.buildNode button{width:100%}#buildActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}#buildNotice{color:#ecd48f!important}#saveState{font-size:11px;color:#98b8c8;margin-top:4px}
+@media(max-width:580px){#buildTree{grid-template-columns:1fr}#buildCard{padding:14px}.buildNode p{min-height:0}#buildHead h2{font-size:19px}}
+</style></head><body>
+<button id="bBuild" type="button">빌드 · B</button><div id="buildPanel" role="dialog" aria-modal="true" aria-labelledby="buildTitle"><section id="buildCard"><div id="buildHead"><h2 id="buildTitle">빌드 준비</h2><button id="buildClose" type="button">닫기</button></div><p id="buildSummary"></p><p id="buildNotice"></p><div id="buildActions"><button data-preset="총기" type="button">총기 추천</button><button data-preset="생존" type="button">생존 추천</button><button data-preset="드론" type="button">드론 추천</button><button id="buildReset" type="button">무료 초기화</button></div><p id="buildPreview"></p><button id="buildApply" type="button" hidden>추천 배분 적용</button><div id="buildTree"></div><p>총기·생존·드론 자유 혼합. 단계당 포인트 1, 각 특성 최대 3단계. 앞 특성 1단계부터 다음 특성을 배울 수 있습니다.</p><p id="saveNotice">성장과 던전 진행을 이 브라우저에 자동 저장합니다. 다른 기기와 동기화되지 않습니다.</p><button id="returnBase" type="button">던전 포기 · 준비 구역으로</button><p>획득 XP와 빌드는 유지됩니다. 미완주 구역과 보상은 다시 도전해야 합니다.</p></section></div><a href="./index.html" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);z-index:4;color:#eed693;background:#101e2b;padding:8px;border:1px solid #aa9158;border-radius:6px;font-size:12px;text-decoration:none">생성기 실험판 · 본판으로</a><canvas id="c"></canvas>
+<div class="hud" id="top"><div id="hpt">체력 100/100</div><div id="hpbar"><div id="hp"></div></div><div id="gunname" style="margin-top:6px;color:#9fb4c6">소총 (샘플)</div><div id="xp">XP 0</div><div id="saveState">저장 준비 중</div></div><div id="flash"></div><div id="ov"><div id="ovb"><h2 id="ovh"></h2><p id="ovp"></p><div id="ovbtn">다시 입장</div></div></div>
+<div class="hud" id="zone"><div id="zt">구역 0/0</div><div id="et">적 0 남음</div><div style="margin-top:4px;color:#7f95a8;font-size:11px">실험판 · Forge 개선 생성기</div></div>
+<canvas id="mm" width="110" height="120"></canvas>
+<div class="hud" id="msg"></div>
+<div id="stick"><div id="knob"></div></div>
+<div class="b on" id="bAuto">자동<br>OFF</div><div class="b" id="bSkill">점사<br>Q</div><div class="b" id="bDodge">회피<br>Space</div><div class="b" id="bFire">공격<br>J</div>
+<div class="hud" id="help">WASD 이동 · 마우스 조준 · 클릭/J 공격 · Space 회피 · Q 점사 · T 자동</div>
+<script type="importmap">{"imports":{"three":"./three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';import {OBJLoader} from './OBJLoader.js';import {MTLLoader} from './MTLLoader.js';
+// The dungeon generator: a seed and a few numbers in, a grid and a list of rooms out. No three.js and no DOM, so it runs in
+// any game, in a worker or in Node. It's the generator from Dungeon Forge by Majid Manzarpour (MIT), split from its view,
+// with these changes, each found by measuring or by walking it (tools/check-generator.mjs):
+//   - A theme never changes the floor plan: layout and dressing draw from separate random streams.
+//   - Corridors go around rooms they don't belong to, so the room graph is what you walk.
+//   - Rooms stand further apart, leaving rock for corridors and a real wall between neighbours.
+//   - Roles are given on the links that exist after carving, and rooms of 12 or more get every role the layout can hold.
+//   - Solid props say how big they are, and `walkable` is a grid a game can path on.
+
+const VOID = 0;
+const FLOOR = 1;
+const WALL = 2;
+const POOL = 3;
+const THEME_NAMES = ['ancient', 'molten', 'frost', 'grim', 'verdant'];
+const ROLES = ['entrance', 'combat', 'elite', 'treasure', 'shrine', 'boss'];
+
+// What each theme changes in the dungeon itself. Colours and lights are the view's (themes.js).
+const THEME_RULES = {
+	ancient: {
+		nameA: ['가라앉은', '잊힌', '고요한', '텅 빈', '오래된', '부서진', '이름 없는', '무너진'],
+		nameB: ['회랑', '지하 보고', '카타콤', '심연', '성소', '지하 납골당', '고분', '성유물함'],
+	},
+	molten: {
+		pools: { amount: 0.16, pits: 2 },
+		veins: 0.8,
+		nameA: ['용융의', '잿빛', '재가 된', '그을린', '검게 탄', '타오르는', '불씨의', '그슬린'],
+		nameB: ['대장간', '용광로', '칼데라', '주조소', '가마', '분화구', '도가니', '심연'],
+	},
+	frost: {
+		lakes: true,
+		icicles: true,
+		nameA: ['얼어붙은', '서리에 묶인', '빙하의', '울부짖는', '창백한', '떨리는', '겨울에 잠긴', '백설에 갇힌'],
+		nameB: ['지하 묘실', '동굴', '골짜기', '회랑', '무덤', '굴', '끝자락', '틈새'],
+	},
+	grim: {
+		pools: { amount: 0.05, pits: 1 },
+		veins: 0.45,
+		graveyards: true,
+		bones: true,
+		nameA: ['시든', '흐느끼는', '썩어가는', '저주받은', '그늘진', '역병의', '애도하는', '음산한'],
+		nameB: ['네크로폴리스', '납골당', '무덤', '시신 안치소', '묘지', '카타콤', '영안실', '지하 묘실'],
+	},
+	verdant: {
+		pools: { amount: 0.05, pits: 1 },
+		roots: true,
+		nameA: ['푸르른', '우거진', '포자에 얽힌', '뒤엉킨', '이끼 낀', '깨어나는', '야생의', '만개한'],
+		nameB: ['정원', '굴', '뿌리', '온실', '골짜기', '숲', '저수조', '정자'],
+	},
+};
+
+// How wide a solid prop's foot is, in cells (a radius). Anything not listed can be walked through or over.
+const SOLID_RADIUS = { pillar: 0.27, chest: 0.42, sarco: 0.72, grave: 0.2, shrineCrystal: 0.48, bossCrystal: 1.05, brazier: 0.3 };
+
+const SPAWN_RADIUS = [0, 0.14, 0.17, 0.22];
+
+function mulberry32(seed) {
+	let a = seed >>> 0;
+	return () => {
+		a |= 0;
+		a = (a + 0x6d2b79f5) | 0;
+		let t = Math.imul(a ^ (a >>> 15), 1 | a);
+		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+		return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+	};
+}
+
+function makeRng(seed) {
+	const r = mulberry32(seed);
+	return {
+		f: (a, b) => a + r() * (b - a),
+		i: (a, b) => a + Math.floor(r() * (b - a + 1)),
+		pick: (arr) => arr[Math.floor(r() * arr.length)],
+		chance: (p) => r() < p,
+		raw: r,
+	};
+}
+
+// Bowyer-Watson. A room's centre never lands exactly on another's: the tiny offsets keep the triangles well shaped.
+function delaunay(pts) {
+	const n = pts.length;
+	if (n < 2) return [];
+	if (n === 2) return [[0, 1]];
+	const P = pts.map((p, i) => ({ x: p.x + ((i * 0.618033) % 1) * 1e-3, y: p.y + ((i * 0.414213) % 1) * 1e-3, i }));
+	let minX = 1e18;
+	let minY = 1e18;
+	let maxX = -1e18;
+	let maxY = -1e18;
+	for (const p of P) {
+		if (p.x < minX) minX = p.x;
+		if (p.y < minY) minY = p.y;
+		if (p.x > maxX) maxX = p.x;
+		if (p.y > maxY) maxY = p.y;
+	}
+	const dm = Math.max(maxX - minX, maxY - minY, 1);
+	const mx = (minX + maxX) / 2;
+	const my = (minY + maxY) / 2;
+	const mkTri = (a, b, c) => {
+		const t = [a, b, c];
+		const d = 2 * (a.x * (b.y - c.y) + b.x * (c.y - a.y) + c.x * (a.y - b.y));
+		if (Math.abs(d) < 1e-12) {
+			t.ccx = 0;
+			t.ccy = 0;
+			t.r2 = Infinity;
+			return t;
+		}
+		const a2 = a.x * a.x + a.y * a.y;
+		const b2 = b.x * b.x + b.y * b.y;
+		const c2 = c.x * c.x + c.y * c.y;
+		t.ccx = (a2 * (b.y - c.y) + b2 * (c.y - a.y) + c2 * (a.y - b.y)) / d;
+		t.ccy = (a2 * (c.x - b.x) + b2 * (a.x - c.x) + c2 * (b.x - a.x)) / d;
+		t.r2 = (a.x - t.ccx) * (a.x - t.ccx) + (a.y - t.ccy) * (a.y - t.ccy);
+		return t;
+	};
+	let tris = [mkTri({ x: mx - 30 * dm, y: my - dm, i: -1 }, { x: mx, y: my + 30 * dm, i: -2 }, { x: mx + 30 * dm, y: my - dm, i: -3 })];
+	for (const p of P) {
+		const bad = [];
+		const edges = [];
+		for (const t of tris) if ((p.x - t.ccx) * (p.x - t.ccx) + (p.y - t.ccy) * (p.y - t.ccy) < t.r2) bad.push(t);
+		for (const t of bad) for (let e = 0; e < 3; e++) edges.push([t[e], t[(e + 1) % 3]]);
+		const poly = [];
+		for (let i = 0; i < edges.length; i++) {
+			let shared = false;
+			for (let j = 0; j < edges.length; j++) {
+				if (i === j) continue;
+				const a = edges[i];
+				const b = edges[j];
+				if ((a[0] === b[0] && a[1] === b[1]) || (a[0] === b[1] && a[1] === b[0])) {
+					shared = true;
+					break;
+				}
+			}
+			if (!shared) poly.push(edges[i]);
+		}
+		tris = tris.filter((t) => !bad.includes(t));
+		for (const e of poly) tris.push(mkTri(e[0], e[1], p));
+	}
+	tris = tris.filter((t) => t[0].i >= 0 && t[1].i >= 0 && t[2].i >= 0);
+	const seen = new Set();
+	const out = [];
+	for (const t of tris) {
+		for (let e = 0; e < 3; e++) {
+			const a = t[e].i;
+			const b = t[(e + 1) % 3].i;
+			const lo = Math.min(a, b);
+			const hi = Math.max(a, b);
+			const k = lo * 4096 + hi;
+			if (!seen.has(k)) {
+				seen.add(k);
+				out.push([lo, hi]);
+			}
+		}
+	}
+	return out;
+}
+
+// Depth, difficulty, the critical path and every role, from the links that exist. Run again if carving added any.
+function giveRoles(rooms, edges, rng) {
+	const N = rooms.length;
+	for (const r of rooms) {
+		r.type = 'combat';
+		r.degree = 0;
+	}
+	for (const e of edges) {
+		e.isCritical = false;
+		rooms[e.a].degree++;
+		rooms[e.b].degree++;
+	}
+	const adj = Array.from({ length: N }, () => []);
+	edges.forEach((e, i) => {
+		adj[e.a].push({ b: e.b, i });
+		adj[e.b].push({ b: e.a, i });
+	});
+	let boss = 0;
+	for (let i = 1; i < N; i++) if (rooms[i].w * rooms[i].h > rooms[boss].w * rooms[boss].h) boss = i;
+	const distFrom = (src) => {
+		const D = new Int32Array(N).fill(-1);
+		D[src] = 0;
+		const q = [src];
+		for (let h = 0; h < q.length; h++) for (const e of adj[q[h]]) if (D[e.b] < 0) {
+			D[e.b] = D[q[h]] + 1;
+			q.push(e.b);
+		}
+		return D;
+	};
+	const dB = distFrom(boss);
+	let entrance = -1;
+	let bestD = -1;
+	for (let i = 0; i < N; i++) if (i !== boss && rooms[i].degree === 1 && dB[i] > bestD) {
+		bestD = dB[i];
+		entrance = i;
+	}
+	if (entrance < 0) for (let i = 0; i < N; i++) if (i !== boss && dB[i] > bestD) {
+		bestD = dB[i];
+		entrance = i;
+	}
+	const dE = distFrom(entrance);
+	let maxDepth = 1;
+	for (let i = 0; i < N; i++) if (dE[i] > maxDepth) maxDepth = dE[i];
+	rooms.forEach((r, i) => {
+		r.depth = Math.max(0, dE[i]);
+		r.difficulty = Math.min(1, 0.15 + 0.85 * (r.depth / maxDepth));
+	});
+	rooms[entrance].type = 'entrance';
+	rooms[entrance].difficulty = 0;
+	rooms[boss].type = 'boss';
+	rooms[boss].difficulty = 1;
+
+	const par = new Int32Array(N).fill(-1);
+	const pe = new Int32Array(N).fill(-1);
+	const vis = new Uint8Array(N);
+	vis[entrance] = 1;
+	const q = [entrance];
+	for (let h = 0; h < q.length; h++) for (const e of adj[q[h]]) if (!vis[e.b]) {
+		vis[e.b] = 1;
+		par[e.b] = q[h];
+		pe[e.b] = e.i;
+		q.push(e.b);
+	}
+	const crit = new Set();
+	const path = [];
+	for (let c = boss; c !== -1; c = par[c]) {
+		crit.add(c);
+		path.unshift(c);
+		if (pe[c] >= 0) edges[pe[c]].isCritical = true;
+		if (c === entrance) break;
+	}
+	for (const r of rooms) r.critical = crit.has(r.id);
+
+	const leaves = [];
+	for (let i = 0; i < N; i++) if (i !== entrance && i !== boss && rooms[i].degree === 1) leaves.push(i);
+	leaves.sort((a, b) => rooms[b].depth - rooms[a].depth);
+	for (const i of leaves.slice(0, 4)) rooms[i].type = 'treasure';
+
+	const shrines = [];
+	for (let i = 0; i < N; i++) {
+		const r = rooms[i];
+		if (r.type === 'combat' && !crit.has(i) && r.depth > maxDepth * 0.3 && r.depth < maxDepth * 0.85) shrines.push(i);
+	}
+	for (let k = 0; k < 2 && shrines.length > 0; k++) rooms[shrines.splice(rng.i(0, shrines.length - 1), 1)[0]].type = 'shrine';
+	const elites = [];
+	for (const i of crit) {
+		const r = rooms[i];
+		if (r.type === 'combat' && r.depth >= maxDepth * 0.55 && r.depth <= maxDepth * 0.85) elites.push(i);
+	}
+	elites.sort((a, b) => rooms[a].depth - rooms[b].depth);
+	for (let k = 0; k < Math.min(2, elites.length); k++) rooms[elites[elites.length - 1 - k]].type = 'elite';
+
+	// A dungeon of a dozen rooms or more should have one of each if there's any room to spare.
+	if (N >= 12) {
+		const has = (t) => rooms.some((r) => r.type === t);
+		const combat = (critical) => rooms.filter((r) => r.type === 'combat' && r.critical === critical).sort((a, b) => b.depth - a.depth);
+		if (!has('elite')) {
+			const c = combat(true);
+			if (c.length) c[0].type = 'elite';
+		}
+		if (!has('treasure')) {
+			const c = combat(false);
+			if (c.length) c[0].type = 'treasure';
+		}
+		if (!has('shrine')) {
+			const c = combat(false);
+			if (c.length) c[Math.floor(c.length / 2)].type = 'shrine';
+		}
+	}
+	return { entrance, boss, maxDepth, path };
+}
+
+const key2 = (a, b) => (Math.min(a, b) << 12) | Math.max(a, b);
+
+// The room-to-room links a body could really walk: a run of corridor between rooms, or two rooms touching.
+function trueLinks(W, H, grid, roomId, corridor) {
+	const links = new Set();
+	const seen = new Uint8Array(W * H);
+	const stack = [];
+	for (let c = 0; c < W * H; c++) {
+		if (grid[c] !== FLOOR || !corridor[c] || seen[c]) continue;
+		seen[c] = 1;
+		stack.push(c);
+		const touch = new Set();
+		while (stack.length) {
+			const v = stack.pop();
+			const x = v % W;
+			for (const u of [x > 0 ? v - 1 : -1, x < W - 1 ? v + 1 : -1, v - W, v + W]) {
+				if (u < 0 || u >= W * H) continue;
+				if (roomId[u] >= 0) touch.add(roomId[u]);
+				else if (grid[u] === FLOOR && corridor[u] && !seen[u]) {
+					seen[u] = 1;
+					stack.push(u);
+				}
+			}
+		}
+		const t = [...touch];
+		for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) links.add(key2(t[i], t[j]));
+	}
+	for (let c = 0; c < W * H; c++) {
+		if (roomId[c] < 0) continue;
+		if (c % W < W - 1 && roomId[c + 1] >= 0 && roomId[c + 1] !== roomId[c]) links.add(key2(roomId[c], roomId[c + 1]));
+		if (c + W < W * H && roomId[c + W] >= 0 && roomId[c + W] !== roomId[c]) links.add(key2(roomId[c], roomId[c + W]));
+	}
+	return links;
+}
+
+// A corridor's centre line from A to B: straight or one bend when that's clear, or else the cheapest way round. Rooms it
+// doesn't belong to cost far more than any detour; they're only crossed if nothing else reaches.
+function routeCorridor(A, B, W, H, near, hug, used, rng, heap, budget) {
+	const cost = (c) => {
+		const owner = near[c];
+		if (owner === -2 || (owner >= 0 && owner !== A.id && owner !== B.id)) return 60;
+		// Leaving a room straight on costs 8 at each end; running along its wall costs far more.
+		return used[c] ? 24 : hug[c] ? 4 : 0;
+	};
+	const line = (pts) => {
+		let score = 0;
+		const out = [];
+		for (let i = 0; i + 1 < pts.length; i++) {
+			const [x0, y0] = pts[i];
+			const [x1, y1] = pts[i + 1];
+			const dx = Math.sign(x1 - x0);
+			const dy = Math.sign(y1 - y0);
+			for (let x = x0, y = y0; ; x += dx, y += dy) {
+				out.push(y * W + x);
+				score += cost(y * W + x);
+				if (x === x1 && y === y1) break;
+			}
+		}
+		return { out, score };
+	};
+	const candidates = [];
+	const ovX = Math.min(A.cx + A.w / 2, B.cx + B.w / 2) - Math.max(A.cx - A.w / 2, B.cx - B.w / 2);
+	const ovY = Math.min(A.cy + A.h / 2, B.cy + B.h / 2) - Math.max(A.cy - A.h / 2, B.cy - B.h / 2);
+	if (ovX >= 5) {
+		const x = Math.round((Math.max(A.cx - A.w / 2, B.cx - B.w / 2) + Math.min(A.cx + A.w / 2, B.cx + B.w / 2)) / 2);
+		candidates.push(line([[x, A.cy], [x, B.cy]]));
+	}
+	if (ovY >= 5) {
+		const y = Math.round((Math.max(A.cy - A.h / 2, B.cy - B.h / 2) + Math.min(A.cy + A.h / 2, B.cy + B.h / 2)) / 2);
+		candidates.push(line([[A.cx, y], [B.cx, y]]));
+	}
+	const hv = line([[A.cx, A.cy], [B.cx, A.cy], [B.cx, B.cy]]);
+	const vh = line([[A.cx, A.cy], [A.cx, B.cy], [B.cx, B.cy]]);
+	if (rng.chance(0.5)) candidates.push(hv, vh);
+	else candidates.push(vh, hv);
+	let best = candidates[0];
+	for (const c of candidates) if (c.score < best.score) best = c;
+	if (best.score <= 16) return best.out;
+
+	// Search over cell and direction, so a turn can cost something and corridors stay mostly straight.
+	const N = W * H * 4;
+	if (!heap.g || heap.g.length !== N) {
+		heap.g = new Int32Array(N);
+		heap.from = new Int32Array(N);
+		heap.stamp = new Int32Array(N);
+		heap.now = 0;
+	}
+	heap.now++;
+	const { g, from, stamp, now } = heap;
+	const DX = [1, -1, 0, 0];
+	const DY = [0, 0, 1, -1];
+	const goal = B.cy * W + B.cx;
+	const open = [];
+	const push = (f, s) => {
+		open.push([f, s]);
+		let i = open.length - 1;
+		while (i > 0) {
+			const p = (i - 1) >> 1;
+			if (open[p][0] <= open[i][0]) break;
+			[open[p], open[i]] = [open[i], open[p]];
+			i = p;
+		}
+	};
+	const pop = () => {
+		const top = open[0];
+		const last = open.pop();
+		if (open.length) {
+			open[0] = last;
+			let i = 0;
+			for (;;) {
+				const l = 2 * i + 1;
+				const r = l + 1;
+				let m = i;
+				if (l < open.length && open[l][0] < open[m][0]) m = l;
+				if (r < open.length && open[r][0] < open[m][0]) m = r;
+				if (m === i) break;
+				[open[m], open[i]] = [open[i], open[m]];
+				i = m;
+			}
+		}
+		return top;
+	};
+	const h = (c) => Math.abs((c % W) - B.cx) + Math.abs(Math.floor(c / W) - B.cy);
+	const start = A.cy * W + A.cx;
+	for (let d = 0; d < 4; d++) {
+		const s = start * 4 + d;
+		g[s] = 0;
+		stamp[s] = now;
+		from[s] = -1;
+		push(h(start), s);
+	}
+	let end = -1;
+	let spent = 0;
+	while (open.length && spent++ < budget) {
+		const [, s] = pop();
+		const c = s >> 2;
+		const d = s & 3;
+		if (c === goal) {
+			end = s;
+			break;
+		}
+		const x = c % W;
+		const y = Math.floor(c / W);
+		for (let nd = 0; nd < 4; nd++) {
+			const nx = x + DX[nd];
+			const ny = y + DY[nd];
+			if (nx < 2 || ny < 2 || nx >= W - 2 || ny >= H - 2) continue;
+			const nc = ny * W + nx;
+			const ns = nc * 4 + nd;
+			const ng = g[s] + 1 + cost(nc) + (nd === d ? 0 : 3);
+			if (stamp[ns] === now && g[ns] <= ng) continue;
+			stamp[ns] = now;
+			g[ns] = ng;
+			from[ns] = s;
+			push(ng + h(nc), ns);
+		}
+	}
+	if (end < 0) return best.out;
+	const out = [];
+	for (let s = end; s !== -1; s = from[s]) out.push(s >> 2);
+	return out;
+}
+
+function tryGenerate(seed, params) {
+	const rng = makeRng(seed);
+	const dress = makeRng((seed ^ 0x5bd1e995) >>> 0);
+	const N = params.rooms;
+	const TH = THEME_RULES[params.theme];
+
+	// 1. Scatter.
+	const R = Math.sqrt(N) * 6;
+	const rooms = [];
+	const large = [];
+	for (let i = 0; i < N; i++) {
+		const t = rng.raw();
+		let w;
+		let h;
+		let arch;
+		if (t < 0.45) {
+			arch = 's';
+			w = rng.i(5, 7);
+			h = rng.i(5, 7);
+		} else if (t < 0.85) {
+			arch = 'm';
+			w = rng.i(8, 12);
+			h = rng.i(8, 12);
+		} else {
+			arch = 'l';
+			w = rng.i(13, 18);
+			h = rng.i(13, 18);
+			large.push(i);
+		}
+		const st = rng.raw();
+		const shape = st < 0.6 ? 'rect' : st < 0.82 ? 'ellipse' : 'oct';
+		const ang = rng.f(0, Math.PI * 2);
+		const rad = R * Math.sqrt(rng.raw());
+		rooms.push({ id: i, cx: Math.cos(ang) * rad, cy: Math.sin(ang) * rad, w, h, arch, shape, type: 'combat', depth: 0, difficulty: 0.2, degree: 0 });
+	}
+	while (large.length < 2) {
+		const j = rng.i(0, N - 1);
+		if (rooms[j].arch !== 'l') {
+			rooms[j].arch = 'l';
+			rooms[j].w = rng.i(13, 18);
+			rooms[j].h = rng.i(13, 18);
+			rooms[j].shape = 'rect';
+			large.push(j);
+		}
+	}
+
+	// 2. Separate. An even-sized room is one cell wider than its number and centres round to whole cells, so a gap of 6
+	// leaves at least 4 cells of rock: a corridor can pass between two rooms with a wall on each side.
+	const PAD = 6;
+	{
+		const CX = new Float64Array(N);
+		const CY = new Float64Array(N);
+		const HW = new Float64Array(N);
+		const HH = new Float64Array(N);
+		for (let i = 0; i < N; i++) {
+			CX[i] = rooms[i].cx;
+			CY[i] = rooms[i].cy;
+			HW[i] = rooms[i].w / 2 + PAD / 2;
+			HH[i] = rooms[i].h / 2 + PAD / 2;
+		}
+		for (let iter = 0; iter < 400; iter++) {
+			let moved = false;
+			for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+				const ox = HW[i] + HW[j] - Math.abs(CX[i] - CX[j]);
+				if (ox <= 0) continue;
+				const oy = HH[i] + HH[j] - Math.abs(CY[i] - CY[j]);
+				if (oy <= 0) continue;
+				moved = true;
+				if (ox < oy) {
+					const s = CX[i] <= CX[j] ? -1 : 1;
+					CX[i] += (s * ox) / 2;
+					CX[j] -= (s * ox) / 2;
+				} else {
+					const s = CY[i] <= CY[j] ? -1 : 1;
+					CY[i] += (s * oy) / 2;
+					CY[j] -= (s * oy) / 2;
+				}
+			}
+			if (!moved) break;
+		}
+		for (let i = 0; i < N; i++) {
+			rooms[i].cx = Math.round(CX[i]);
+			rooms[i].cy = Math.round(CY[i]);
+		}
+	}
+
+	// 3. Graph: Delaunay, then a minimum spanning tree so everything connects, then some edges back as loops.
+	const centers = rooms.map((r) => ({ x: r.cx, y: r.cy }));
+	let delEdges = delaunay(centers);
+	if (delEdges.length === 0) {
+		delEdges = [];
+		for (let i = 0; i < N - 1; i++) delEdges.push([i, i + 1]);
+	}
+	const elen = (e) => Math.hypot(centers[e[0]].x - centers[e[1]].x, centers[e[0]].y - centers[e[1]].y);
+	const adj = Array.from({ length: N }, () => []);
+	delEdges.forEach((e, idx) => {
+		const w = elen(e);
+		adj[e[0]].push({ b: e[1], w, idx });
+		adj[e[1]].push({ b: e[0], w, idx });
+	});
+	const inT = new Uint8Array(N);
+	inT[0] = 1;
+	let inCount = 1;
+	const mstIdx = new Set();
+	while (inCount < N) {
+		let best = null;
+		for (let a = 0; a < N; a++) if (inT[a]) for (const e of adj[a]) if (!inT[e.b] && (!best || e.w < best.w)) best = e;
+		if (!best) break;
+		inT[best.b] = 1;
+		inCount++;
+		mstIdx.add(best.idx);
+	}
+	if (inCount < N) return { valid: false, stats: {} };
+	let mstLenSum = 0;
+	for (const i of mstIdx) mstLenSum += elen(delEdges[i]);
+	const mstMean = mstLenSum / Math.max(1, mstIdx.size);
+	const edges = [];
+	delEdges.forEach((e, idx) => {
+		if (mstIdx.has(idx)) edges.push({ a: e[0], b: e[1], isLoop: false, isCritical: false });
+		else if (elen(e) < mstMean * 2.2 && rng.chance(params.loops)) edges.push({ a: e[0], b: e[1], isLoop: true, isCritical: false });
+	});
+	for (const e of edges) {
+		rooms[e.a].degree++;
+		rooms[e.b].degree++;
+	}
+	// Dungeons need dead ends: drop loops until there are at least three.
+	if (N >= 20) {
+		let leafCount = 0;
+		for (let i = 0; i < N; i++) if (rooms[i].degree === 1) leafCount++;
+		while (leafCount < 3) {
+			let bi = -1;
+			let bs = -1;
+			for (let i = 0; i < edges.length; i++) {
+				const e = edges[i];
+				if (!e.isLoop) continue;
+				const s = (rooms[e.a].degree === 2 ? 1 : 0) + (rooms[e.b].degree === 2 ? 1 : 0);
+				const score = s * 10000 + Math.hypot(centers[e.a].x - centers[e.b].x, centers[e.a].y - centers[e.b].y);
+				if (score > bs) {
+					bs = score;
+					bi = i;
+				}
+			}
+			if (bi < 0) break;
+			const e = edges[bi];
+			if (--rooms[e.a].degree === 1) leafCount++;
+			if (--rooms[e.b].degree === 1) leafCount++;
+			edges.splice(bi, 1);
+		}
+	}
+
+	// 4. Paint the rooms on a grid with space around them for corridors that go the long way.
+	let minX = 1e9;
+	let minY = 1e9;
+	let maxX = -1e9;
+	let maxY = -1e9;
+	for (const r of rooms) {
+		minX = Math.min(minX, r.cx - Math.ceil(r.w / 2));
+		maxX = Math.max(maxX, r.cx + Math.ceil(r.w / 2));
+		minY = Math.min(minY, r.cy - Math.ceil(r.h / 2));
+		maxY = Math.max(maxY, r.cy + Math.ceil(r.h / 2));
+	}
+	const PADG = 7;
+	const offX = PADG - minX;
+	const offY = PADG - minY;
+	const W = maxX - minX + PADG * 2 + 1;
+	const H = maxY - minY + PADG * 2 + 1;
+	for (const r of rooms) {
+		r.cx += offX;
+		r.cy += offY;
+	}
+	const grid = new Uint8Array(W * H);
+	const roomId = new Int16Array(W * H).fill(-1);
+	const corridor = new Uint8Array(W * H);
+	const idx = (x, y) => y * W + x;
+	const inB = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
+	for (const r of rooms) {
+		const rx = r.w / 2;
+		const ry = r.h / 2;
+		const ch = Math.min(rx, ry) * 0.55;
+		let x0 = 1e9;
+		let y0 = 1e9;
+		let x1 = -1;
+		let y1 = -1;
+		for (let y = Math.max(0, Math.floor(r.cy - ry)); y <= Math.min(H - 1, Math.ceil(r.cy + ry)); y++) {
+			const dy = y - r.cy;
+			const ady = Math.abs(dy);
+			if (ady > ry) continue;
+			for (let x = Math.max(0, Math.floor(r.cx - rx)); x <= Math.min(W - 1, Math.ceil(r.cx + rx)); x++) {
+				const dx = x - r.cx;
+				const adx = Math.abs(dx);
+				if (adx > rx) continue;
+				let ok = true;
+				if (r.shape === 'ellipse') ok = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1;
+				else if (r.shape === 'oct') ok = adx <= rx - ch || ady <= ry - ch || adx - (rx - ch) + (ady - (ry - ch)) <= ch;
+				if (ok) {
+					grid[idx(x, y)] = FLOOR;
+					roomId[idx(x, y)] = r.id;
+					x0 = Math.min(x0, x);
+					y0 = Math.min(y0, y);
+					x1 = Math.max(x1, x);
+					y1 = Math.max(y1, y);
+				}
+			}
+		}
+		Object.assign(r, { x0, y0, x1, y1 });
+	}
+
+	// 5. Route every corridor. Near-room marks show whose rock a cell is: a room's id, -2 for between two rooms.
+	const near = new Int16Array(W * H).fill(-1);
+	const CLEAR = 3;
+	for (const r of rooms) {
+		for (let y = Math.max(0, r.y0 - CLEAR); y <= Math.min(H - 1, r.y1 + CLEAR); y++) {
+			for (let x = Math.max(0, r.x0 - CLEAR); x <= Math.min(W - 1, r.x1 + CLEAR); x++) {
+				const c = idx(x, y);
+				near[c] = near[c] === -1 || near[c] === r.id ? r.id : -2;
+			}
+		}
+	}
+	const hug = new Uint8Array(W * H);
+	for (const r of rooms) {
+		for (let y = Math.max(0, r.y0 - 2); y <= Math.min(H - 1, r.y1 + 2); y++) for (let x = Math.max(0, r.x0 - 2); x <= Math.min(W - 1, r.x1 + 2); x++) if (roomId[idx(x, y)] < 0) hug[idx(x, y)] = 1;
+	}
+	const used = new Uint8Array(W * H);
+	const heap = {};
+	const order = edges.map((_, i) => i).sort((a, b) => Number(edges[a].isLoop) - Number(edges[b].isLoop));
+	const dropped = new Set();
+	for (const i of order) {
+		const e = edges[i];
+		// A loop gets a short search: one that needs a long way round isn't much of a shortcut anyway.
+		e.route = routeCorridor(rooms[e.a], rooms[e.b], W, H, near, hug, used, rng, heap, e.isLoop ? 6000 : 1e9);
+		// Crossing corridors join everything they touch, so a boss can end up one walk from the entrance with no room between. The
+		// tree has to connect, so its rare crossings stay and are listed; a loop is a bonus, and one that can't stay clear is left out.
+		if (e.isLoop && e.route.some((c) => used[c] || (near[c] !== e.a && near[c] !== e.b && near[c] !== -1))) {
+			dropped.add(e);
+			continue;
+		}
+		for (const c of e.route) for (let oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) {
+			const u = c + oy * W + ox;
+			// Inside a room corridors may share the floor: that joins nothing new.
+			if (u >= 0 && u < W * H && roomId[u] < 0) used[u] = 1;
+		}
+	}
+
+	if (dropped.size) for (let i = edges.length - 1; i >= 0; i--) if (dropped.has(edges[i])) edges.splice(i, 1);
+
+	// 6. Roles decide the widths: the critical path is widest, a way to treasure is sometimes tight. Then carve.
+	const rolesRng = makeRng((seed ^ 0x2f6e2b1) >>> 0);
+	let graph = giveRoles(rooms, edges, rolesRng);
+	const stamp = (x, y) => {
+		if (inB(x, y) && grid[idx(x, y)] !== FLOOR) {
+			grid[idx(x, y)] = FLOOR;
+			corridor[idx(x, y)] = 1;
+		}
+	};
+	for (const e of edges) {
+		let w = e.isCritical ? 3 : 2;
+		if (!e.isCritical && (rooms[e.a].type === 'treasure' || rooms[e.b].type === 'treasure') && rng.chance(0.4)) w = 1;
+		const o = w === 1 ? [0] : w === 2 ? [0, 1] : [-1, 0, 1];
+		for (let i = 0; i < e.route.length; i++) {
+			const c = e.route[i];
+			const n = e.route[i + 1] ?? c;
+			const p = e.route[i - 1] ?? c;
+			const x = c % W;
+			const y = Math.floor(c / W);
+			// Both directions at a bend, so its outer corner is as wide as the rest.
+			const horiz = Math.abs(n - c) === 1 || Math.abs(c - p) === 1;
+			const vert = Math.abs(n - c) === W || Math.abs(c - p) === W;
+			for (const k of o) {
+				if (horiz) stamp(x, y + k);
+				if (vert) stamp(x + k, y);
+				if (horiz && vert) for (const j of o) stamp(x + j, y + k);
+			}
+		}
+		e.width = w;
+		delete e.route;
+	}
+
+	// Whatever carving really connected is the graph. A link nobody planned is a real shortcut, so it's listed and roles
+	// follow it.
+	const planned = new Set(edges.map((e) => key2(e.a, e.b)));
+	let merged = 0;
+	for (const k of trueLinks(W, H, grid, roomId, corridor)) {
+		if (planned.has(k)) continue;
+		edges.push({ a: k >> 12, b: k & 4095, isLoop: true, isCritical: false, width: 2, merged: true });
+		merged++;
+	}
+	if (merged) graph = giveRoles(rooms, edges, rolesRng);
+	const { entrance, boss, maxDepth, path } = graph;
+
+	// Walls around everything.
+	for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+		if (grid[idx(x, y)] !== FLOOR) continue;
+		for (let ny = Math.max(0, y - 1); ny <= Math.min(H - 1, y + 1); ny++) for (let nx = Math.max(0, x - 1); nx <= Math.min(W - 1, x + 1); nx++) {
+			if (grid[idx(nx, ny)] === VOID) grid[idx(nx, ny)] = WALL;
+		}
+	}
+	const doorway = new Uint8Array(W * H);
+	for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+		const c = idx(x, y);
+		if (!corridor[c]) continue;
+		if ((x < W - 1 && roomId[c + 1] >= 0) || (x > 0 && roomId[c - 1] >= 0) || (y < H - 1 && roomId[c + W] >= 0) || (y > 0 && roomId[c - W] >= 0)) doorway[c] = 1;
+	}
+
+	// Everything from here on is dressing and draws from `dress`, so the plan above is the same in every theme.
+	for (const r of rooms) {
+		r.lake = false;
+		r.grave = false;
+	}
+	if (TH.lakes) {
+		const lc = [];
+		for (const r of rooms) if ((r.type === 'combat' || r.type === 'elite') && Math.min(r.w, r.h) >= 9) lc.push(r);
+		for (let k = 0; k < 2 && lc.length > 0; k++) lc.splice(dress.i(0, lc.length - 1), 1)[0].lake = true;
+	}
+	if (TH.graveyards) {
+		const gc = [];
+		for (const r of rooms) if (r.type === 'combat' && r.shape !== 'ellipse' && Math.min(r.w, r.h) >= 8) gc.push(r);
+		for (let k = 0; k < 3 && gc.length > 0; k++) gc.splice(dress.i(0, gc.length - 1), 1)[0].grave = true;
+	}
+
+	// Liquid pockets in walls: a wall cell becomes a sunken slot, with any rock it exposes filled in. Floors never change.
+	const pools = [];
+	if (TH.pools && TH.pools.amount > 0) {
+		const nearDoorC = (x, y, d) => {
+			for (let oy = -d; oy <= d; oy++) for (let ox = -d; ox <= d; ox++) {
+				const nx = x + ox;
+				const ny = y + oy;
+				if (inB(nx, ny) && doorway[idx(nx, ny)]) return true;
+			}
+			return false;
+		};
+		const cand = [];
+		for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+			const c = idx(x, y);
+			if (grid[c] !== WALL || nearDoorC(x, y, 2)) continue;
+			const nf = (grid[c + 1] === FLOOR ? 1 : 0) + (grid[c - 1] === FLOOR ? 1 : 0) + (grid[c + W] === FLOOR ? 1 : 0) + (grid[c - W] === FLOOR ? 1 : 0);
+			if (nf === 1) cand.push({ x, y });
+		}
+		for (let i = cand.length - 1; i > 0; i--) {
+			const j = dress.i(0, i);
+			const t = cand[i];
+			cand[i] = cand[j];
+			cand[j] = t;
+		}
+		const target = Math.round(cand.length * TH.pools.amount);
+		for (const s of cand) {
+			if (pools.length >= target) break;
+			let close = false;
+			for (const p of pools) if (Math.max(Math.abs(p.x - s.x), Math.abs(p.y - s.y)) < 3) {
+				close = true;
+				break;
+			}
+			if (close) continue;
+			grid[idx(s.x, s.y)] = POOL;
+			pools.push({ x: s.x, y: s.y });
+		}
+		for (const p of pools) for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
+			const nx = p.x + ox;
+			const ny = p.y + oy;
+			if (inB(nx, ny) && grid[idx(nx, ny)] === VOID) grid[idx(nx, ny)] = WALL;
+		}
+	}
+	// Pits inside rooms: single floor cells sunk into liquid. Interior only and far apart, so a room can never be split.
+	if (TH.pools && TH.pools.pits) {
+		for (const r of rooms) {
+			if ((r.type !== 'combat' && r.type !== 'elite') || r.lake || r.grave) continue;
+			let n = Math.min(TH.pools.pits, Math.floor((r.w * r.h) / 45) + 1);
+			let guard = 0;
+			while (n > 0 && guard++ < 40) {
+				const x = dress.i(Math.floor(r.cx - r.w / 2) + 2, Math.ceil(r.cx + r.w / 2) - 2);
+				const y = dress.i(Math.floor(r.cy - r.h / 2) + 2, Math.ceil(r.cy + r.h / 2) - 2);
+				if (!inB(x, y)) continue;
+				const c = idx(x, y);
+				if (roomId[c] !== r.id || grid[c] !== FLOOR || doorway[c]) continue;
+				let ok = true;
+				for (let oy = -1; oy <= 1 && ok; oy++) for (let ox = -1; ox <= 1; ox++) if (grid[idx(x + ox, y + oy)] !== FLOOR) {
+					ok = false;
+					break;
+				}
+				if (ok) for (const p of pools) if (Math.max(Math.abs(p.x - x), Math.abs(p.y - y)) < 4) {
+					ok = false;
+					break;
+				}
+				if (!ok) continue;
+				grid[c] = POOL;
+				pools.push({ x, y });
+				n--;
+			}
+		}
+	}
+	// Frozen lakes stay walkable: the cells are floor, flagged so a view can draw ice.
+	const lakeMask = new Uint8Array(W * H);
+	const lakeCells = [];
+	for (const r of rooms) {
+		if (!r.lake) continue;
+		for (let y = Math.floor(r.cy - r.h / 2) + 2; y <= Math.ceil(r.cy + r.h / 2) - 2; y++) for (let x = Math.floor(r.cx - r.w / 2) + 2; x <= Math.ceil(r.cx + r.w / 2) - 2; x++) {
+			if (!inB(x, y)) continue;
+			const c = idx(x, y);
+			if (roomId[c] !== r.id || grid[c] !== FLOOR || doorway[c]) continue;
+			let solid = false;
+			for (let oy = -1; oy <= 1 && !solid; oy++) for (let ox = -1; ox <= 1; ox++) if (grid[idx(x + ox, y + oy)] !== FLOOR) {
+				solid = true;
+				break;
+			}
+			if (!solid) {
+				lakeMask[c] = 1;
+				lakeCells.push({ x, y });
+			}
+		}
+	}
+	// Doorway arches: one frame per run of doorway cells across the corridor, up to 3 wide.
+	const arches = [];
+	{
+		const aseen = new Uint8Array(W * H);
+		for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+			const c = idx(x, y);
+			if (!doorway[c] || aseen[c]) continue;
+			let rx = 0;
+			if (x < W - 1 && roomId[c + 1] >= 0) rx = 1;
+			else if (x > 0 && roomId[c - 1] >= 0) rx = -1;
+			const px = rx === 0 ? 1 : 0;
+			const py = rx === 0 ? 0 : 1;
+			let x0 = x;
+			let y0 = y;
+			let x1 = x;
+			let y1 = y;
+			while (inB(x0 - px, y0 - py) && doorway[idx(x0 - px, y0 - py)] && !aseen[idx(x0 - px, y0 - py)]) {
+				x0 -= px;
+				y0 -= py;
+			}
+			while (inB(x1 + px, y1 + py) && doorway[idx(x1 + px, y1 + py)] && !aseen[idx(x1 + px, y1 + py)]) {
+				x1 += px;
+				y1 += py;
+			}
+			let len = 0;
+			for (let ax = x0, ay = y0; ; ax += px, ay += py) {
+				aseen[idx(ax, ay)] = 1;
+				len++;
+				if (ax === x1 && ay === y1) break;
+			}
+			// Both posts need a wall to stand in, or the frame would hang in open floor.
+			const wallAt = (ax, ay) => inB(ax, ay) && grid[idx(ax, ay)] === WALL;
+			if (len <= 3 && wallAt(x0 - px, y0 - py) && wallAt(x1 + px, y1 + py)) arches.push({ x: (x0 + x1) / 2, y: (y0 + y1) / 2, px, py, len, role: roomId[c + rx] >= 0 ? rooms[roomId[c + rx]].type : null });
+		}
+	}
+
+	// Connection check, cell by cell from the entrance's middle.
+	const bfs = new Int16Array(W * H).fill(-1);
+	const ei = idx(rooms[entrance].cx, rooms[entrance].cy);
+	let floorTotal = 0;
+	for (let i = 0; i < W * H; i++) if (grid[i] === FLOOR) floorTotal++;
+	let reach = 0;
+	let maxBfs = 0;
+	if (grid[ei] === FLOOR) {
+		const q = new Int32Array(floorTotal);
+		let qh = 0;
+		let qt = 0;
+		q[qt++] = ei;
+		bfs[ei] = 0;
+		reach = 1;
+		while (qh < qt) {
+			const c = q[qh++];
+			const x = c % W;
+			const b = bfs[c] + 1;
+			for (const n of [x > 0 ? c - 1 : -1, x < W - 1 ? c + 1 : -1, c - W, c + W]) {
+				if (n >= 0 && n < W * H && grid[n] === FLOOR && bfs[n] < 0) {
+					bfs[n] = b;
+					q[qt++] = n;
+					reach++;
+				}
+			}
+		}
+		maxBfs = bfs[q[qt - 1]];
+	}
+	const valid = reach === floorTotal && floorTotal > 0;
+
+	// Props, spawns and torches: plain data.
+	const props = [];
+	const spawns = [];
+	const occ = new Uint8Array(W * H);
+	const nearDoor = (x, y, d) => {
+		for (let oy = -d; oy <= d; oy++) for (let ox = -d; ox <= d; ox++) if (inB(x + ox, y + oy) && doorway[idx(x + ox, y + oy)]) return true;
+		return false;
+	};
+	const interior = (x, y) => {
+		for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (!inB(x + ox, y + oy) || grid[idx(x + ox, y + oy)] !== FLOOR) return false;
+		return true;
+	};
+	const put = (kind, x, y, rot, scale, rid) => {
+		props.push({ kind, x, y, rot: rot || 0, scale: scale || 1, roomId: rid });
+		occ[idx(x, y)] = 1;
+	};
+	for (const r of rooms) {
+		const cix = idx(r.cx, r.cy);
+		if (r.type === 'entrance') put('ring', r.cx, r.cy, 0, 1, r.id);
+		if (r.type === 'boss') {
+			put('bossCrystal', r.cx, r.cy, dress.f(0, 6.28), 1, r.id);
+			const rr = Math.max(2.5, Math.min(r.w, r.h) / 2 - 2);
+			const a0 = dress.f(0, 1);
+			for (let k = 0; k < 6; k++) {
+				const a = a0 + (k * Math.PI) / 3;
+				const bx = Math.round(r.cx + Math.cos(a) * rr);
+				const by = Math.round(r.cy + Math.sin(a) * rr);
+				if (inB(bx, by) && interior(bx, by) && !occ[idx(bx, by)] && !nearDoor(bx, by, 2)) put('brazier', bx, by, 0, 1, r.id);
+			}
+		}
+		if (r.type === 'treasure' && grid[cix] === FLOOR) put('chest', r.cx, r.cy, (dress.i(0, 3) * Math.PI) / 2, 1, r.id);
+		if (r.type === 'shrine' && grid[cix] === FLOOR) put('shrineCrystal', r.cx, r.cy, dress.f(0, 6.28), 1, r.id);
+		if ((r.type === 'combat' || r.type === 'elite') && Math.min(r.w, r.h) >= 10 && r.shape !== 'ellipse' && !r.grave && !r.lake) {
+			const step = Math.min(r.w, r.h) >= 14 ? 4 : 3;
+			for (let y = Math.ceil(r.cy - r.h / 2) + 2; y <= r.cy + r.h / 2 - 2; y++) for (let x = Math.ceil(r.cx - r.w / 2) + 2; x <= r.cx + r.w / 2 - 2; x++) {
+				if ((x - r.cx) % step !== 0 || (y - r.cy) % step !== 0) continue;
+				if (x === r.cx && y === r.cy) continue;
+				if (interior(x, y) && !occ[idx(x, y)] && !nearDoor(x, y, 2)) put('pillar', x, y, 0, dress.f(0.94, 1.06), r.id);
+			}
+		}
+		if (r.grave) {
+			for (let y = Math.ceil(r.cy - r.h / 2) + 2; y <= r.cy + r.h / 2 - 2; y += 2) for (let x = Math.ceil(r.cx - r.w / 2) + 2; x <= r.cx + r.w / 2 - 2; x += 2) {
+				if (Math.abs(x - r.cx) <= 1 && Math.abs(y - r.cy) <= 1) continue;
+				if (interior(x, y) && !occ[idx(x, y)] && !nearDoor(x, y, 2) && dress.chance(0.8)) put('grave', x, y, dress.f(-0.3, 0.3), dress.f(0.85, 1.15), r.id);
+			}
+			if (Math.min(r.w, r.h) >= 10 && grid[cix] === FLOOR && !occ[cix]) put('sarco', r.cx, r.cy, dress.chance(0.5) ? 0 : Math.PI / 2, 1, r.id);
+			let cd = 4;
+			while (cd-- > 0) {
+				const x = dress.i(Math.floor(r.cx - r.w / 2) + 1, Math.ceil(r.cx + r.w / 2) - 1);
+				const y = dress.i(Math.floor(r.cy - r.h / 2) + 1, Math.ceil(r.cy + r.h / 2) - 1);
+				if (inB(x, y) && roomId[idx(x, y)] === r.id && grid[idx(x, y)] === FLOOR && !occ[idx(x, y)]) put('candle', x, y, 0, dress.f(0.85, 1.2), r.id);
+			}
+		}
+		if (r.type === 'combat' || r.type === 'elite' || r.type === 'boss') {
+			let area = 0;
+			for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (roomId[idx(x, y)] === r.id) area++;
+			let count = Math.round((area / 18) * (0.5 + r.difficulty));
+			if (r.type === 'elite') count = Math.max(2, Math.round(count * 0.6));
+			if (r.type === 'boss') count = dress.i(2, 3);
+			const tier = r.type === 'elite' ? 3 : Math.max(1, Math.ceil(r.difficulty * 3));
+			let guard = 0;
+			while (count > 0 && guard++ < 220) {
+				const x = dress.i(r.x0 + 1, r.x1 - 1);
+				const y = dress.i(r.y0 + 1, r.y1 - 1);
+				if (!inB(x, y)) continue;
+				const c = idx(x, y);
+				// Open floor on every side: a marker in the narrow tip of a round room would shut the way past it.
+				if (roomId[c] === r.id && grid[c] === FLOOR && !occ[c] && !lakeMask[c] && interior(x, y) && !nearDoor(x, y, 2)) {
+					spawns.push({ x, y, tier, roomId: r.id, radius: SPAWN_RADIUS[tier] });
+					occ[c] = 1;
+					count--;
+				}
+			}
+		}
+	}
+	// Torches sit on walls facing floor, not hard against an arch.
+	const torchCand = [];
+	for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+		const c = idx(x, y);
+		if (grid[c] !== WALL || nearDoor(x, y, 1)) continue;
+		if (x < W - 1 && grid[c + 1] === FLOOR) torchCand.push({ x, y, dx: 1, dy: 0 });
+		else if (x > 0 && grid[c - 1] === FLOOR) torchCand.push({ x, y, dx: -1, dy: 0 });
+		else if (y < H - 1 && grid[c + W] === FLOOR) torchCand.push({ x, y, dx: 0, dy: 1 });
+		else if (y > 0 && grid[c - W] === FLOOR) torchCand.push({ x, y, dx: 0, dy: -1 });
+	}
+	for (let i = torchCand.length - 1; i > 0; i--) {
+		const j = dress.i(0, i);
+		const t = torchCand[i];
+		torchCand[i] = torchCand[j];
+		torchCand[j] = t;
+	}
+	const torches = [];
+	const taken = new Set();
+	for (const c of torchCand) {
+		let ok = true;
+		for (let oy = -4; oy <= 4 && ok; oy++) for (let ox = -4; ox <= 4; ox++) if (taken.has(idx(c.x + ox, c.y + oy))) {
+			ok = false;
+			break;
+		}
+		if (ok) {
+			torches.push(c);
+			taken.add(idx(c.x, c.y));
+		}
+	}
+	for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+		const c = idx(x, y);
+		if (grid[c] !== FLOOR || occ[c] || doorway[c] || lakeMask[c]) continue;
+		const rid = roomId[c];
+		const diff = rid >= 0 ? rooms[rid].difficulty : 0.5;
+		let p = params.decor * 0.045 * (1.25 - 0.6 * diff);
+		if (corridor[c]) p *= 0.45;
+		if (dress.chance(p)) props.push({ kind: 'debris', x, y, rot: dress.f(0, 6.28), scale: dress.f(0.6, 1.35), roomId: rid, v: dress.i(0, 2) });
+	}
+	const floorDir = (x, y) => {
+		const c = idx(x, y);
+		if (x < W - 1 && grid[c + 1] === FLOOR) return [1, 0];
+		if (x > 0 && grid[c - 1] === FLOOR) return [-1, 0];
+		if (y < H - 1 && grid[c + W] === FLOOR) return [0, 1];
+		if (y > 0 && grid[c - W] === FLOOR) return [0, -1];
+		return null;
+	};
+	if (TH.icicles) {
+		for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+			if (grid[idx(x, y)] !== WALL) continue;
+			const d = floorDir(x, y);
+			if (d && dress.chance(0.06 + 0.08 * params.decor)) props.push({ kind: 'icicle', x, y, dx: d[0], dy: d[1], rot: dress.f(0, 6.28), scale: dress.f(0.7, 1.3) });
+		}
+		for (const lc of lakeCells) if (dress.chance(0.05)) props.push({ kind: 'shardIce', x: lc.x, y: lc.y, rot: dress.f(0, 6.28), scale: dress.f(0.6, 1.2) });
+	}
+	if (TH.roots) {
+		const sites = [];
+		for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+			if (grid[idx(x, y)] !== WALL) continue;
+			const d = floorDir(x, y);
+			if (d && roomId[idx(x + d[0], y + d[1])] >= 0) sites.push({ x, y, dx: d[0], dy: d[1] });
+		}
+		for (let i = sites.length - 1; i > 0; i--) {
+			const j = dress.i(0, i);
+			const t = sites[i];
+			sites[i] = sites[j];
+			sites[j] = t;
+		}
+		const breaches = [];
+		for (const s of sites) {
+			if (breaches.length >= 5) break;
+			let close = false;
+			for (const b of breaches) if (Math.max(Math.abs(b.x - s.x), Math.abs(b.y - s.y)) < 7) {
+				close = true;
+				break;
+			}
+			if (!close) breaches.push(s);
+		}
+		const mossMask = new Uint8Array(W * H);
+		for (const b of breaches) {
+			props.push({ kind: 'roots', x: b.x, y: b.y, dx: b.dx, dy: b.dy, rot: 0, scale: dress.f(0.9, 1.2) });
+			for (let oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) {
+				const nx = b.x + ox;
+				const ny = b.y + oy;
+				if (!inB(nx, ny)) continue;
+				const c = idx(nx, ny);
+				if (grid[c] === FLOOR && !mossMask[c] && dress.chance(0.75)) {
+					mossMask[c] = 1;
+					props.push({ kind: 'moss', x: nx, y: ny, rot: dress.f(0, 6.28), scale: dress.f(0.7, 1.4) });
+				}
+			}
+		}
+		for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+			const c = idx(x, y);
+			if (grid[c] !== FLOOR || mossMask[c] || lakeMask[c]) continue;
+			const nw = (x < W - 1 && grid[c + 1] === WALL ? 1 : 0) + (x > 0 && grid[c - 1] === WALL ? 1 : 0) + (y < H - 1 && grid[c + W] === WALL ? 1 : 0) + (y > 0 && grid[c - W] === WALL ? 1 : 0);
+			if (nw > 0 && dress.chance(0.12 * params.decor)) {
+				mossMask[c] = 1;
+				props.push({ kind: 'moss', x, y, rot: dress.f(0, 6.28), scale: dress.f(0.6, 1.3) });
+			}
+		}
+	}
+	if (TH.bones) {
+		for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+			const c = idx(x, y);
+			if (grid[c] !== FLOOR || occ[c] || doorway[c] || corridor[c]) continue;
+			const rid = roomId[c];
+			if (rid >= 0 && rooms[rid].depth > 1 && dress.chance(0.018 + 0.02 * params.decor)) props.push({ kind: 'bones', x, y, rot: dress.f(0, 6.28), scale: dress.f(0.8, 1.2), roomId: rid });
+		}
+	}
+	// Cracks run out of pools and lake shores into the stone, never loose mid-room.
+	{
+		const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+		if (TH.veins) for (const p of pools) for (const [dx, dy] of DIRS) {
+			const nx = p.x + dx;
+			const ny = p.y + dy;
+			if (inB(nx, ny) && grid[idx(nx, ny)] === FLOOR && dress.chance(TH.veins)) props.push({ kind: 'crack', x: nx, y: ny, dx, dy, rot: dress.f(0, 6.28), scale: dress.f(0.9, 1.5) });
+		}
+		if (TH.lakes) for (const lc of lakeCells) for (const [dx, dy] of DIRS) {
+			const nx = lc.x + dx;
+			const ny = lc.y + dy;
+			if (!inB(nx, ny)) continue;
+			const c2 = idx(nx, ny);
+			if (grid[c2] === FLOOR && !lakeMask[c2] && dress.chance(0.3)) props.push({ kind: 'crack', x: nx, y: ny, dx, dy, rot: dress.f(0, 6.28), scale: dress.f(0.7, 1.2), ice: 1 });
+		}
+	}
+	for (const r of rooms) {
+		if (r.type !== 'elite' && r.type !== 'boss') continue;
+		const cand = [];
+		for (let y = r.y0 - 1; y <= r.y1 + 1; y++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) {
+			if (!inB(x, y) || grid[idx(x, y)] !== WALL || nearDoor(x, y, 1)) continue;
+			const d = floorDir(x, y);
+			if (d && roomId[idx(x + d[0], y + d[1])] === r.id) cand.push({ x, y, dx: d[0], dy: d[1] });
+		}
+		for (let i = cand.length - 1; i > 0; i--) {
+			const j = dress.i(0, i);
+			const t = cand[i];
+			cand[i] = cand[j];
+			cand[j] = t;
+		}
+		const placed = [];
+		for (const s of cand) {
+			if (placed.length >= (r.type === 'boss' ? 4 : 2)) break;
+			let close = false;
+			for (const p of placed) if (Math.max(Math.abs(p.x - s.x), Math.abs(p.y - s.y)) < 4) {
+				close = true;
+				break;
+			}
+			// Not on a torch's stone.
+			if (!close && !taken.has(idx(s.x, s.y))) {
+				placed.push(s);
+				props.push({ kind: 'banner', x: s.x, y: s.y, dx: s.dx, dy: s.dy, rot: 0, scale: 1 });
+			}
+		}
+	}
+	for (const p of props) if (SOLID_RADIUS[p.kind]) p.radius = SOLID_RADIUS[p.kind] * (p.scale ?? 1);
+
+	// `walkable`: floor with nothing solid on the cell's middle. A cell a game can path through.
+	const walkable = new Uint8Array(W * H);
+	for (let i = 0; i < W * H; i++) walkable[i] = grid[i] === FLOOR ? 1 : 0;
+	for (const p of props) if (p.radius) walkable[idx(p.x, p.y)] = 0;
+
+	const name = (() => {
+		const n = makeRng((seed ^ 0x51ed270b) >>> 0);
+		const C = ['Mal', 'Vor', 'Ash', 'Ker', 'Ul', 'Dra', 'Noth', 'Zar', 'Bel', 'Mor', 'Gol', 'Ith'];
+		const D = ['goth', 'ath', 'ruk', 'esh', 'mir', 'gul', 'dan', 'oth', 'ek', 'ash', 'uzek', 'arim'];
+		const na = n.pick(TH.nameA);
+		const nb = n.pick(TH.nameB);
+		return `${na} ${nb} (${n.pick(C)}’${n.pick(D)})`;
+	})();
+	return {
+		valid,
+		seed,
+		params,
+		name,
+		W,
+		H,
+		grid,
+		roomId,
+		corridor,
+		doorway,
+		walkable,
+		bfs,
+		maxBfs,
+		lakeMask,
+		rooms,
+		edges,
+		entrance,
+		boss,
+		path,
+		maxDepth,
+		props,
+		spawns,
+		torches,
+		pools,
+		lakeCells,
+		arches,
+		stats: { rooms: N, edges: edges.length, loops: edges.filter((e) => e.isLoop).length, merged, critLen: path.length - 1, floorTiles: floorTotal, reach, attempts: 1 },
+	};
+}
+
+// Same input, same output, in every browser and in Node (no Math.random, no clock). Keeps retrying on the rare layout
+// that fails its check; `valid` says if none passed, which hasn't happened in testing (tools/check-generator.mjs).
+function generateForgeDungeon({ seed = 1337, rooms = 24, loops = 0.3, decor = 0.6, theme = 'ancient' } = {}) {
+	const params = { seed: seed >>> 0, rooms: Math.max(4, Math.round(rooms)), loops, decor, theme };
+	if (!THEME_RULES[theme]) throw new Error(`Unknown theme "${theme}". Use one of: ${THEME_NAMES.join(', ')}.`);
+	let s = params.seed;
+	let d = null;
+	let attempt = 0;
+	while (attempt < 5) {
+		d = tryGenerate(s, params);
+		if (d.valid) break;
+		s = (Math.imul(s, 9301) + 49297) >>> 0;
+		attempt++;
+	}
+	d.stats.attempts = attempt + 1;
+	return d;
+}
+
+// The middle of a cell in world units, with the dungeon centred on the origin. Multiply by your cell size (1.5 m is a good
+// human scale: corridors of 1.5 to 4.5 m).
+function cellToWorld(d, x, y, cellSize = 1) {
+	return { x: (x - d.W / 2 + 0.5) * cellSize, z: (y - d.H / 2 + 0.5) * cellSize };
+}
+
+// The cell a world position stands in.
+function worldToCell(d, wx, wz, cellSize = 1) {
+	return { x: Math.floor(wx / cellSize + d.W / 2), y: Math.floor(wz / cellSize + d.H / 2) };
+}
+
+// The map as text, one character a cell, for reading in a terminal or a chat: # wall, . floor, ~ pool, and each room's role
+// letter at its middle (E entrance, C combat, L elite, T treasure, S shrine, B boss).
+function asciiMap(d) {
+	const ch = [' ', '.', '#', '~'];
+	const letters = { entrance: 'E', combat: 'C', elite: 'L', treasure: 'T', shrine: 'S', boss: 'B' };
+	const rows = [];
+	for (let y = 0; y < d.H; y++) {
+		let row = '';
+		for (let x = 0; x < d.W; x++) row += ch[d.grid[y * d.W + x]];
+		rows.push(row);
+	}
+	for (const r of d.rooms) rows[r.cy] = rows[r.cy].slice(0, r.cx) + letters[r.type] + rows[r.cy].slice(r.cx + 1);
+	return rows.join('\n');
+}
+
+function generateDungeon(o){return generateForgeDungeon({seed:o.seed,rooms:o.roomCount,loops:o.loopChance,decor:0,theme:'ancient'})}
+
+const SAVE_KEY='grid-breach-forge-lab-v1';
+const NODES=[
+ {id:'power',branch:'총기',name:'화력 훈련',detail:'단계당 총기 피해 +8%'},
+ {id:'pierce',branch:'총기',name:'관통 사격',detail:'단계마다 추가 적 1명 관통. 벽과 엄폐물은 관통 불가',requires:'power'},
+ {id:'tempo',branch:'총기',name:'속사 훈련',detail:'단계당 기본 사격 간격 6% 감소',requires:'pierce'},
+ {id:'armor',branch:'생존',name:'방호 훈련',detail:'단계당 최대 체력 +15'},
+ {id:'recovery',branch:'생존',name:'회복 전술',detail:'단계당 구역 클리어 시 체력 8 회복',requires:'armor'},
+ {id:'mobility',branch:'생존',name:'기동 전술',detail:'단계당 회피 재사용 대기시간 10% 감소',requires:'recovery'},
+ {id:'drone',branch:'드론',name:'지원 드론',detail:'드론이 시야 안의 적 자동 공격. 단계당 피해 +5'},
+ {id:'relay',branch:'드론',name:'추적 지원',detail:'단계당 드론 사거리 +3, 재공격 시간 10% 감소',requires:'drone'},
+ {id:'link',branch:'드론',name:'연계 사격',detail:'드론이 공격한 적을 총기로 맞히면 단계당 추가 피해 +2',requires:'relay'}
+];
+function levelFor(xp){let level=1;while(level<25&&xp>=100*level*(level+1)/2)level++;return level}
+function pointsFor(xp){return 3+levelFor(xp)-1}
+function cleanBuild(value,xp){const b={};let used=0;for(const n of NODES){const rank=Math.max(0,Math.min(3,Math.floor(Number(value?.[n.id])||0)));b[n.id]=n.requires&&!b[n.requires]?0:Math.min(rank,Math.max(0,pointsFor(xp)-used));used+=b[n.id]}return b}
+function usedPoints(build){return NODES.reduce((a,n)=>a+(build[n.id]||0),0)}
+function recommend(xp,branch){const b=cleanBuild({},xp);let left=pointsFor(xp);const order=[...NODES.filter(n=>n.branch===branch),...NODES.filter(n=>n.branch!==branch)];for(const n of order){const r=Math.min(3,left);b[n.id]=r;left-=r;if(!left)break}return b}
+function stats(b){return {damage:1+.08*b.power,rate:1-.06*b.tempo,hp:100+15*b.armor,heal:8*b.recovery,dodge:1-.1*b.mobility,drone:b.drone*5,range:12+3*b.relay,droneRate:1.6*(1-.1*b.relay),link:2*b.link,pierce:b.pierce}}
+function unpack(raw){const a=JSON.parse(raw);if(a?.version!==3||!Number.isFinite(a.xp)||a.xp<0||a.xp>1e9)throw Error('invalid save');a.xp=Math.floor(a.xp);a.build=cleanBuild(a.build,a.xp);if(a.run&&(!Array.isArray(a.run.rooms)||!Array.isArray(a.run.enemies)||!Number.isFinite(a.run.x)||!Number.isFinite(a.run.z)))a.run=null;return a}
+
+let loaded=null,saveError='',saveRecovered=false;try{const raw=localStorage.getItem(SAVE_KEY);if(raw){try{loaded=unpack(raw)}catch(e){const backup=localStorage.getItem(SAVE_KEY+'-backup');if(backup){loaded=unpack(backup);saveRecovered=true}else saveError='저장을 읽지 못했습니다. 새 진행을 자동 덮어쓰지 않습니다.'}}}catch(e){saveError='저장 공간에 접근할 수 없습니다. 이 탭을 닫으면 진행이 사라집니다.'}
+
+const P=new URLSearchParams(location.search);const SEED=+(P.get('seed')||loaded?.run?.seed||1337),NR=+(P.get('rooms')||loaded?.run?.roomCount||7);
+const T=4,R=0.45;const ZM=+(P.get('zoom')||1);
+const d=generateDungeon({seed:SEED,roomCount:NR,themeKey:'frost',loopChance:0.1,decorDensity:0});
+const W=d.W,H=d.H,idx=(x,y)=>y*W+x;
+const $=id=>document.getElementById(id);
+const TOUCH=P.get('touch')?true:(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window);document.body.classList.toggle('touch',TOUCH);
+const cv=$('c');const rd=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(devicePixelRatio,2));
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x070b10);sc.fog=new THREE.Fog(0x070b10,38,80);
+sc.add(new THREE.HemisphereLight(0xb8c8dc,0x3a3d44,2.4));const dl=new THREE.DirectionalLight(0xffeedd,2.2);dl.position.set(-10,24,8);sc.add(dl);
+const cam=new THREE.PerspectiveCamera(38,1,1,200);
+function resize(){rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+// ---- map
+const floorTiles=[],wallTiles=[];const isF=(x,y)=>x>=0&&y>=0&&x<W&&y<H&&d.grid[idx(x,y)]===1;
+for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(isF(x,y)){floorTiles.push([x,y]);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isF(x+dx,y+dy)&&!d.doorway[idx(x,y)])wallTiles.push([x+dx,y+dy])}
+const wallSet=[...new Set(wallTiles.map(([x,y])=>x+','+y))].map(s=>s.split(',').map(Number));
+const fm=new THREE.InstancedMesh(new THREE.BoxGeometry(T,.4,T),new THREE.MeshStandardMaterial({color:0x2c3846,roughness:.9}),floorTiles.length);
+const m4=new THREE.Matrix4();floorTiles.forEach(([x,y],i)=>{m4.makeTranslation(x*T,-.2,y*T);fm.setMatrixAt(i,m4);const c=new THREE.Color().setHSL(.58,.12,.30+(((x+y)%2)?.05:0)+((x*7+y*13)%5)*.012);fm.setColorAt(i,c)});sc.add(fm);
+const wm=new THREE.InstancedMesh(new THREE.BoxGeometry(T,1.3,T),new THREE.MeshStandardMaterial({color:0x7a8ca2,roughness:.8}),wallSet.length);
+wallSet.forEach(([x,y],i)=>{m4.makeTranslation(x*T,.65,y*T);wm.setMatrixAt(i,m4)});sc.add(wm);
+const locked=new Set();const barriers=new Map();const cover=new Map();
+const cellOf=v=>Math.round(v/T);
+const walk=(wx,wz)=>{const cx=cellOf(wx),cy=cellOf(wz);return cx>=0&&cy>=0&&cx<W&&cy<H&&d.grid[idx(cx,cy)]===1&&!locked.has(idx(cx,cy))&&!cover.has(idx(cx,cy))};
+const free=(x,z,r)=>walk(x-r,z-r)&&walk(x+r,z-r)&&walk(x-r,z+r)&&walk(x+r,z+r);
+// ---- rooms
+const rooms=d.rooms;const ent=rooms.find(r=>r.type==='entrance')||rooms[0];
+const rs=rooms.map(r=>({r,cleared:r.type==='entrance',active:false,enemies:[]}));
+rs.forEach(o=>{o.empty=o.r.type!=='entrance'&&o.r.id!==d.boss&&o.r.type!=='boss'&&!d.spawns.some(s=>s.roomId===o.r.id);if(o.empty)o.cleared=true});
+const fightRooms=rs.filter(o=>!o.cleared);const emptyN=rs.filter(o=>o.empty).length;
+function roomCells(id){const a=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(d.roomId[idx(x,y)]===id&&d.grid[idx(x,y)]===1)a.push([x,y]);return a}
+rs.forEach(o=>{o.cells=roomCells(o.r.id);const s=new Set(o.cells.map(([x,y])=>idx(x,y)));o.doors=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=idx(x,y);if(!d.doorway[i])continue;if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>x+dx>=0&&y+dy>=0&&x+dx<W&&y+dy<H&&s.has(idx(x+dx,y+dy))))o.doors.push(i)}});
+// ---- cover objects (crates & low walls): block movement and bullets
+{
+ let s0=(SEED^0x9e3779b9)>>>0;const rnd=()=>((s0=(s0*1664525+1013904223)>>>0)/4294967296);
+ const passable=o=>{const cells=o.cells.filter(([x,y])=>!cover.has(idx(x,y)));if(!cells.length)return false;
+  const set=new Set(cells.map(([x,y])=>idx(x,y)));const q=[idx(cells[0][0],cells[0][1])];const seen=new Set(q);
+  for(let h=0;h<q.length;h++){const c=q[h],x=c%W,y=(c-x)/W;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const n=idx(x+dx,y+dy);if(set.has(n)&&!seen.has(n)){seen.add(n);q.push(n)}}}
+  return seen.size===set.size};
+ for(const o of rs){
+  if(o.r.type==='entrance'||o.empty)continue;
+  const cand=o.cells.filter(([x,y])=>{
+   if(o.doors.some(di=>{const dx2=di%W,dy2=(di-dx2)/W;return Math.abs(dx2-x)+Math.abs(dy2-y)<=1}))return false;
+   if(Math.hypot(x-o.r.cx,y-o.r.cy)<1.8)return false;return true});
+  for(let i=cand.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t=cand[i];cand[i]=cand[j];cand[j]=t}
+  const boss=o.r.type==='boss'||o.r.id===d.boss;
+  const want=Math.min(boss?2:4,Math.max(boss?1:2,Math.round(cand.length/12)));
+  let placed=0;
+  for(const [x,y] of cand){if(placed>=want)break;const ii=idx(x,y);
+   let adj=false;for(const k of cover.keys()){const kx=k%W,ky=(k-kx)/W;if(Math.abs(kx-x)+Math.abs(ky-y)<=1){adj=true;break}}
+   if(adj)continue;
+   cover.set(ii,'x');if(!passable(o)){cover.delete(ii);continue}
+   cover.set(ii,rnd()<.55?'crate':'low');placed++}
+ }
+ for(const [ii,ty] of cover){const x=ii%W,y=(ii-x)/W;
+  const m=ty==='crate'?new THREE.Mesh(new THREE.BoxGeometry(2.3,1.9,2.3),new THREE.MeshStandardMaterial({color:0x8a6f4d,roughness:.85})):new THREE.Mesh(new THREE.BoxGeometry(3.3,1.05,3.3),new THREE.MeshStandardMaterial({color:0x97a1a8,roughness:.95}));
+  m.position.set(x*T,ty==='crate'?.95:.55,y*T);sc.add(m)}
+}
+// ---- actors
+const mk=(col,h,r=.4)=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CapsuleGeometry(r,h-2*r,4,8),new THREE.MeshStandardMaterial({color:col,roughness:.7}));b.position.y=h/2;g.add(b);return g};
+const pl=mk(0x3b5c4a,1.8,.42);sc.add(pl);const face=new THREE.Mesh(new THREE.BoxGeometry(.5,.18,.3),new THREE.MeshStandardMaterial({color:0x111,emissive:0x2a6a8a}));face.position.set(0,1.55,.3);pl.add(face);
+const gunPivot=new THREE.Group();gunPivot.position.set(-.2,1.12,0);pl.add(gunPivot);
+const skin=new THREE.MeshStandardMaterial({color:0x2b3b33,roughness:.8});const limb=(a,b)=>{const v=new THREE.Vector3().subVectors(b,a),L=v.length();const m=new THREE.Mesh(new THREE.CylinderGeometry(.09,.08,L,6),skin);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());pl.add(m)};
+limb(new THREE.Vector3(-.34,1.4,0),new THREE.Vector3(-.2,1.1,.42));limb(new THREE.Vector3(.34,1.4,0),new THREE.Vector3(-.2,1.12,.95));
+const flashM=new THREE.Mesh(new THREE.SphereGeometry(.16,6,6),new THREE.MeshBasicMaterial({color:0xffd060}));flashM.position.set(-.2,1.12,1.35);flashM.visible=false;pl.add(flashM);
+const S={hp:100,hpMax:100,x:ent.cx*T,z:ent.cy*T,face:0,dash:0,dashCd:0,fireCd:0,skillCd:0,burst:0,auto:false,xp:0,reward:0,kills:0,deaths:0,t:0,over:false,hitFlash:0};
+// progression and storage
+let build=cleanBuild(loaded?.build,loaded?.xp||0),buildStats=stats(build),panelOpen=false,proposal=null,saveClock=0;
+S.xp=loaded?.xp||0;S.hpMax=buildStats.hp;S.hp=S.hpMax;S.kills=loaded?.kills||0;S.deaths=loaded?.deaths||0;
+const droneVisual=mk(0x4eabb5,.5,.2);sc.add(droneVisual);let droneCd=0;
+function atBase(){return !rs.some(o=>o.active&&!o.cleared)&&d.roomId[idx(cellOf(S.x),cellOf(S.z))]===ent.id&&!S.over}
+function safeToSpend(){return !rs.some(o=>o.active&&!o.cleared)&&!S.over}
+function applyStats(){const old=S.hpMax;buildStats=stats(build);S.hpMax=buildStats.hp;S.hp=Math.min(S.hpMax,S.hp+Math.max(0,S.hpMax-old))}
+function makeSave(){return {generatorVersion:"forge-patch-v1",version:3,xp:S.xp,build,kills:S.kills,deaths:S.deaths,run:{seed:SEED,roomCount:NR,x:S.x,z:S.z,hp:S.hp,t:S.t,reward:S.reward,won:!!S.won,over:!!S.over,ovKind:S.ovKind||'',rooms:rs.map(o=>({id:o.r.id,cleared:o.cleared,active:o.active})),enemies:enemies.map(e=>({roomId:e.room.r.id,kind:e.kind,x:e.x,z:e.z,hp:e.hp})),locked:[...locked]}}}
+function saveGame(){if(saveError)return false;try{const old=localStorage.getItem(SAVE_KEY);if(old){try{unpack(old);localStorage.setItem(SAVE_KEY+'-backup',old)}catch(e){}}localStorage.setItem(SAVE_KEY,JSON.stringify(makeSave()));$('saveState').textContent='자동 저장됨 · 이 브라우저';return true}catch(e){saveError='저장에 실패했습니다. 이 탭을 닫지 마세요.';$('saveState').textContent=saveError;return false}}
+function renderBuild(){const outside=atBase(),safe=safeToSpend(),left=pointsFor(S.xp)-usedPoints(build);$('buildSummary').textContent='레벨 '+levelFor(S.xp)+' · XP '+S.xp+' · 남은 포인트 '+left+' / '+pointsFor(S.xp);$('buildNotice').textContent=outside?'입장 전: 무료 초기화와 추천 배분 가능':safe?'안전 구역: 새 포인트만 배분 가능. 초기화는 준비 구역에서만 가능합니다.':'전투 중: 일시 정지. 배분과 초기화는 전투 후 가능합니다.';$('buildTree').replaceChildren();for(const branch of ['총기','생존','드론']){const col=document.createElement('section');col.className='buildBranch';const h=document.createElement('h3');h.textContent=branch;col.append(h);for(const n of NODES.filter(n=>n.branch===branch)){const node=document.createElement('div');node.className='buildNode';const name=document.createElement('strong');name.textContent=n.name+' '+build[n.id]+'/3';const desc=document.createElement('p');desc.textContent=n.detail;const b=document.createElement('button');b.textContent='포인트 +1';b.type='button';b.disabled=!safe||left<=0||build[n.id]>=3||!!(n.requires&&!build[n.requires]);b.onclick=()=>{if(!safeToSpend()||pointsFor(S.xp)<=usedPoints(build)||build[n.id]>=3||n.requires&&!build[n.requires])return;build[n.id]++;proposal=null;applyStats();saveGame();renderBuild()};node.append(name,desc,b);col.append(node)}$('buildTree').append(col)}document.querySelectorAll('[data-preset]').forEach(b=>b.disabled=!outside);$('buildReset').disabled=!outside;$('buildApply').hidden=!proposal;$('buildPreview').textContent=proposal?'추천안: '+NODES.filter(n=>proposal[n.id]).map(n=>n.name+' '+proposal[n.id]).join(' · '):'';$('saveNotice').textContent=saveError||'성장과 던전 진행을 이 브라우저에 자동 저장합니다. 다른 기기와 동기화되지 않습니다.';}
+function openBuild(){panelOpen=true;proposal=null;keysClear();$('buildPanel').classList.add('on');renderBuild();$('buildClose').focus()}
+function closeBuild(){panelOpen=false;proposal=null;$('buildPanel').classList.remove('on');last=performance.now();$('bBuild').focus()}
+function keysClear(){for(const k in keys)keys[k]=0;mouse.down=false;btnFire=false;stick.x=stick.y=0;kn.style.left='40px';kn.style.top='40px'}
+$('bBuild').onclick=openBuild;$('buildClose').onclick=closeBuild;
+$('buildReset').onclick=()=>{if(!atBase())return;build=cleanBuild({},S.xp);proposal=null;applyStats();saveGame();renderBuild()};
+document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{if(!atBase())return;proposal=recommend(S.xp,b.dataset.preset);renderBuild()});
+$('buildApply').onclick=()=>{if(!atBase()||!proposal)return;build=cleanBuild(proposal,S.xp);proposal=null;applyStats();saveGame();renderBuild()};
+let abandonConfirm=false;$('returnBase').onclick=()=>{if(!atBase()&&!abandonConfirm){abandonConfirm=true;$('returnBase').textContent='확인: 진행 포기하고 준비 구역으로';return}abandonConfirm=false;$('returnBase').textContent='던전 포기 · 준비 구역으로';resetDungeon();S.over=false;S.ovKind='';$('ov').classList.remove('on');saveGame();renderBuild()};
+addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden){keysClear();saveGame()}});
+// gun
+const gunUrl="./";let gunLoaded=false,gunInfo=null;
+new MTLLoader().setPath(gunUrl).load('AssaultRifle2_1.mtl',mt=>{mt.preload();const l=new OBJLoader();l.setMaterials(mt);l.setPath(gunUrl).load('AssaultRifle2_1.obj',o=>{
+ o.traverse(m=>{if(m.isMesh){(Array.isArray(m.material)?m.material:[m.material]).forEach(t=>{t.emissive=new THREE.Color(0x4a5866)})}});const g=new THREE.Group();g.add(o);const bb=new THREE.Box3().setFromObject(g);const sz=bb.getSize(new THREE.Vector3());
+ // long axis -> +Z
+ const ax=sz.x>sz.z?'x':'z';if(ax==='x')g.rotation.y=-Math.PI/2;g.updateMatrixWorld(true);
+ const b2=new THREE.Box3().setFromObject(g);const s2=b2.getSize(new THREE.Vector3());const k=1.35/Math.max(s2.x,s2.z);g.scale.setScalar(k);g.updateMatrixWorld(true);
+ const b3=new THREE.Box3().setFromObject(g);const c=b3.getCenter(new THREE.Vector3());const w=new THREE.Group();w.add(g);g.position.set(-c.x,-c.y,-c.z);w.position.z=.62;
+ w.rotation.y=P.get('flip')?Math.PI:0;gunPivot.add(w);gunLoaded=true;gunInfo={sz:sz.toArray(),ax}})});
+// ---- enemies / bullets
+const enemies=[],bullets=[],ebul=[];
+const bGeo=new THREE.BoxGeometry(.07,.07,.9);const bMat=new THREE.MeshBasicMaterial({color:0xffe060});const eMat=new THREE.MeshBasicMaterial({color:0xff5030});
+function spawnEnemy(o,x,z,kind){const ranged=kind==='shooter',boss=kind==='boss';const g=mk(boss?0x7a2a2a:ranged?0xa05a20:0x8a2a2a,boss?3:1.8,boss?.9:.42);g.position.set(x,0,z);sc.add(g);
+ const hpbar=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.14),new THREE.MeshBasicMaterial({color:0xff4040,depthTest:false}));hpbar.position.y=boss?3.6:2.3;hpbar.renderOrder=9;g.add(hpbar);
+ const HP=boss?1000:ranged?50:80;const e={g,hpbar,room:o,kind,x,z,hp:HP,hpMax:HP,r:boss?.9:.45,sp:boss?2.7:ranged?2.6:4.8,cd:Math.random()*1.2,cd2:3,hit:0,xp:boss?120:ranged?15:10};enemies.push(e);o.enemies.push(e);return e}
+function activate(o){o.active=true;const sp=d.spawns.filter(s=>s.roomId===o.r.id&&!cover.has(idx(s.x,s.y)));const okc=o.cells.filter(([cx,cy])=>!cover.has(idx(cx,cy)));const n=5+Math.round((o.r.difficulty||0.5)*3);
+ for(let i=0;i<n;i++){let x,z;const far=okc.filter(([cx,cy])=>Math.hypot(cx*T-S.x,cy*T-S.z)>11);if(i<sp.length&&Math.hypot(sp[i].x*T-S.x,sp[i].y*T-S.z)>9){x=sp[i].x*T;z=sp[i].y*T}else{const c=(far.length?far:okc)[Math.floor(Math.random()*(far.length||okc.length))];x=c[0]*T;z=c[1]*T}spawnEnemy(o,x+(Math.random()-.5),z+(Math.random()-.5),i%3===2?'shooter':'grunt')}
+ if(o.r.type==='boss'||o.r.id===d.boss){const c=okc[Math.floor(okc.length/2)];spawnEnemy(o,c[0]*T,c[1]*T,'boss')}
+ if(!o.enemies.length){clearRoom(o);return}
+ for(const i of o.doors){if(i===idx(cellOf(S.x),cellOf(S.z)))continue;locked.add(i);const x=i%W,y=(i-x)/W;const m=new THREE.Mesh(new THREE.BoxGeometry(T,2.6,T),new THREE.MeshBasicMaterial({color:0xff3030,transparent:true,opacity:.35}));m.position.set(x*T,1.3,y*T);sc.add(m);barriers.set(i,m)}
+ msg('구역 봉쇄 · 적을 전멸시키면 길이 열립니다')}
+function clearRoom(o){S.hp=Math.min(S.hpMax,S.hp+buildStats.heal);o.cleared=true;for(const i of o.doors){locked.delete(i);const m=barriers.get(i);if(m){sc.remove(m);barriers.delete(i)}}
+ const n=rs.filter(q=>q.cleared&&!q.empty&&q.r.type!=='entrance').length,N=fightRooms.length;msg(n>=N?'모든 구역 돌파! 완주 보상 지급':'구역 클리어 · 길 개방 '+n+'/'+N);if(n>=N&&!S.won){S.won=true;S.reward+=200;S.winT=1.6}saveGame()}
+let msgT=0;function msg(t){const e=$('msg');e.textContent=t;e.style.opacity=1;clearTimeout(msgT);msgT=setTimeout(()=>e.style.opacity=0,2200)}
+// ---- input
+const keys={};addEventListener('keydown',e=>{if(e.code==='KeyB'){e.preventDefault();if(!e.repeat)(panelOpen?closeBuild():openBuild());return}if(e.code==='Escape'&&panelOpen){closeBuild();return}if(panelOpen)return;keys[e.code]=1;if(e.code==='KeyT')toggleAuto();if(e.code==='Space'){S.wantDash=1;e.preventDefault()}if(e.code==='KeyQ')S.wantSkill=1});addEventListener('keyup',e=>keys[e.code]=0);
+let mouse={x:0,y:0,down:false,moved:0};cv.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'){mouse.x=e.clientX;mouse.y=e.clientY;mouse.moved=performance.now()}});
+cv.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){mouse.down=true}});addEventListener('pointerup',()=>mouse.down=false);
+const stick={x:0,y:0,id:null,cx:0,cy:0};const st=$('stick'),kn=$('knob');
+function stickMove(e){const r=st.getBoundingClientRect();const cx=r.left+60,cy=r.top+60;let dx=e.clientX-cx,dy=e.clientY-cy;const L=Math.hypot(dx,dy),M=50;if(L>M){dx*=M/L;dy*=M/L}stick.x=dx/M;stick.y=dy/M;kn.style.left=40+dx+'px';kn.style.top=40+dy+'px'}
+st.addEventListener('pointerdown',e=>{stick.id=e.pointerId;st.setPointerCapture(e.pointerId);stickMove(e)});st.addEventListener('pointermove',e=>{if(e.pointerId===stick.id)stickMove(e)});
+const stEnd=e=>{if(e.pointerId===stick.id){stick.id=null;stick.x=stick.y=0;kn.style.left='40px';kn.style.top='40px'}};st.addEventListener('pointerup',stEnd);st.addEventListener('pointercancel',stEnd);
+let btnFire=false;const bF=$('bFire');bF.addEventListener('pointerdown',e=>{btnFire=true;bF.setPointerCapture(e.pointerId)});bF.addEventListener('pointerup',()=>btnFire=false);bF.addEventListener('pointercancel',()=>btnFire=false);
+$('bDodge').addEventListener('pointerdown',()=>S.wantDash=1);$('bSkill').addEventListener('pointerdown',()=>S.wantSkill=1);
+function toggleAuto(){S.auto=!S.auto;const b=$('bAuto');b.innerHTML='자동<br>'+(S.auto?'ON':'OFF');b.classList.toggle('on',S.auto)}
+$('bAuto').addEventListener('pointerdown',toggleAuto);addEventListener('keydown',e=>{if(e.code==='KeyJ')btnFire=true});addEventListener('keyup',e=>{if(e.code==='KeyJ')btnFire=false});
+if(P.get('auto'))toggleAuto();
+// ---- helpers
+function nearest(){let b=null,bd=1e9;for(const e of enemies){const dd=Math.hypot(e.x-S.x,e.z-S.z);if(dd<bd){bd=dd;b=e}}return[b,bd]}
+function losBlocked(x0,z0,x1,z1){const d0=Math.hypot(x1-x0,z1-z0),n=Math.max(1,Math.ceil(d0/.6));for(let k=1;k<n;k++){const wx=x0+(x1-x0)*k/n,wz=z0+(z1-z0)*k/n;const cx=cellOf(wx),cy=cellOf(wz);if(cx<0||cy<0||cx>=W||cy>=H)return true;const ii=idx(cx,cy);if(d.grid[ii]!==1||cover.has(ii)||locked.has(ii))return true}return false}
+const ray=new THREE.Raycaster(),pln=new THREE.Plane(new THREE.Vector3(0,1,0),-1);
+function mouseAim(){const v=new THREE.Vector2(mouse.x/innerWidth*2-1,-(mouse.y/innerHeight)*2+1);ray.setFromCamera(v,cam);const p=new THREE.Vector3();if(ray.ray.intersectPlane(pln,p))return Math.atan2(p.x-S.x,p.z-S.z);return null}
+function shoot(ang,dmg=8,spread=.03){dmg*=buildStats.damage;S.mf=.05;const a=ang+(Math.random()-.5)*spread*2;const m=new THREE.Mesh(bGeo,bMat);const dx=Math.sin(a),dz=Math.cos(a);m.position.set(S.x+dx*1.2,1.2,S.z+dz*1.2);m.rotation.y=a;sc.add(m);bullets.push({m,dx,dz,life:.9,dmg,left:buildStats.pierce+1,hitIds:new Set(),x:m.position.x,z:m.position.z})}
+function eshoot(e){const a=Math.atan2(S.x-e.x,S.z-e.z);const m=new THREE.Mesh(new THREE.SphereGeometry(.18),eMat);m.position.set(e.x,1.2,e.z);sc.add(m);ebul.push({m,dx:Math.sin(a),dz:Math.cos(a),life:2.2,x:e.x,z:e.z})}
+function hurt(n){if(S.dash>0||S.over)return;S.hp-=n;S.dmgTaken=(S.dmgTaken||0)+n;S.hitFlash=.15;{const f=$('flash');f.style.opacity=1;clearTimeout(S.ft);S.ft=setTimeout(()=>f.style.opacity=0,180)}if(S.hp<=0)S.pendDie=1}
+function resetDungeon(){S.hp=S.hpMax;S.x=ent.cx*T;S.z=ent.cy*T;S.dash=0;S.burst=0;for(const e of enemies)sc.remove(e.g);enemies.length=0;for(const o of rs){o.enemies=[];o.active=false;if(!o.empty&&o.r.type!=='entrance')o.cleared=false}for(const i of [...locked])locked.delete(i);for(const [i,m] of barriers)sc.remove(m);barriers.clear();for(const b of ebul)sc.remove(b.m);ebul.length=0;for(const b of bullets)sc.remove(b.m);bullets.length=0;S.won=false;S.winT=0;S.pendDie=0}
+function showOv(kind){S.over=true;S.ovKind=kind;const o=$('ov');o.classList.add('on');const m=Math.floor(S.t/60),sec=Math.floor(S.t%60);
+ if(kind==='dead'){$('ovh').textContent='쓰러졌습니다';$('ovp').innerHTML='던전 처음부터 다시 도전합니다.<br>획득 XP '+S.xp+' 유지 · 처치 '+S.kills+' · 사망 '+S.deaths+'회<br>완주 보상은 던전을 끝까지 클리어해야 지급됩니다.';$('ovbtn').textContent='다시 입장'}
+ else{$('ovh').textContent='던전 완주!';$('ovp').innerHTML='완주 보상 +200 지급<br>누적 XP '+S.xp+' · 처치 '+S.kills+' · 사망 '+S.deaths+'회 · 플레이 '+m+'분 '+sec+'초<br>(첫 플레이 샘플 종료)';$('ovbtn').textContent='새로 시작'}}
+function reenter(){if(!S.over)return;$('ov').classList.remove('on');resetDungeon();S.over=false;saveGame();msg(S.ovKind==='dead'?'던전 처음부터 재입장 (XP 유지)':'새 던전 시작')}
+$('ovbtn').addEventListener('pointerdown',reenter);addEventListener('keydown',e=>{if(S.over&&(e.code==='Enter'||e.code==='Space')){reenter();e.preventDefault()}});
+function die(){S.deaths++;(S.dlog=S.dlog||[]).push(((rs.find(o=>o.active&&!o.cleared)||{r:{type:'none'}}).r.type));resetDungeon();showOv('dead');saveGame()}
+// BFS toward target room for auto
+function bfsDir(tx,ty){const sx=cellOf(S.x),sy=cellOf(S.z);const prev=new Int32Array(W*H).fill(-2);const q=[idx(sx,sy)];prev[q[0]]=-1;let found=-1;
+ for(let h=0;h<q.length;h++){const c=q[h],x=c%W,y=(c-x)/W;if(x===tx&&y===ty){found=c;break}for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=W||ny>=H)continue;const n=idx(nx,ny);if(prev[n]!==-2||d.grid[n]!==1||locked.has(n)||cover.has(n))continue;prev[n]=c;q.push(n)}}
+ if(found<0)return null;let c=found,path=[];while(c!==-1){path.push(c);c=prev[c]}path.reverse();const nxt=path[Math.min(1,path.length-1)];return[nxt%W*T,Math.floor(nxt/W)*T]}
+function nextTarget(){const rem=fightRooms.filter(o=>!o.cleared);if(!rem.length)return null;let b=null,bd=1e9;for(const o of rem){const dd=Math.hypot(o.r.cx*T-S.x,o.r.cy*T-S.z);if(dd<bd){bd=dd;b=o}}return b}
+// ---- loop
+let last=performance.now();const mmc=$('mm').getContext('2d');
+function mapDraw(){mmc.clearRect(0,0,110,120);const sx=110/W,sy=120/H;mmc.fillStyle='#2a3948';for(const[x,y] of floorTiles)mmc.fillRect(x*sx,y*sy,Math.max(1,sx),Math.max(1,sy));mmc.fillStyle='#8a7452';for(const ii of cover.keys()){const cx2=ii%W,cy2=(ii-cx2)/W;mmc.fillRect(cx2*sx,cy2*sy,Math.max(2,sx),Math.max(2,sy))}for(const o of rs){mmc.fillStyle=o.r.type==='entrance'?'#58a':o.cleared?'#3a7':o.active?'#d44':'#a85';mmc.fillRect(o.r.cx*sx-2,o.r.cy*sy-2,4,4)}mmc.fillStyle='#fff';mmc.fillRect(S.x/T*sx-2,S.z/T*sy-2,4,4)}
+function step(dt){if(S.over||panelOpen)return;S.t+=dt;if(S.winT>0){S.winT-=dt;if(S.winT<=0)showOv('won')}
+ // zone activate
+ const ci=idx(cellOf(S.x),cellOf(S.z));const cr=d.roomId[ci];if(cr>=0&&!d.doorway[ci]){const o=rs.find(q=>q.r.id===cr);if(o&&!o.cleared&&!o.active&&[[-1,-1],[1,-1],[-1,1],[1,1]].every(([a,c])=>{const k=idx(cellOf(S.x+a*R),cellOf(S.z+c*R));return d.roomId[k]===cr&&!d.doorway[k]}))activate(o)}
+ let mx=0,mz=0,wantFire=btnFire||mouse.down,aimA=null;
+ const [tn,td]=nearest();
+ if(S.auto){const act=rs.find(o=>o.active&&!o.cleared);
+  if(tn&&act){const toE=Math.atan2(tn.x-S.x,tn.z-S.z);const k=td<7?-1:td>10?1:0;const sf=td<6?.1:.35;mx=Math.sin(toE)*k+Math.cos(toE)*sf*Math.sin(S.t*.9);mz=Math.cos(toE)*k-Math.sin(toE)*sf*Math.sin(S.t*.9);aimA=toE;wantFire=td<22;if(td<2.2&&S.dashCd<=0)S.wantDash=1;if(S.skillCd<=0&&td<14)S.wantSkill=1;
+   for(const b of ebul)if(Math.hypot(b.x-S.x,b.z-S.z)<2&&S.dashCd<=0){S.wantDash=1}}
+  else{const tr=nextTarget();if(tr){const t=bfsDir(tr.r.cx,tr.r.cy);if(t){mx=t[0]-S.x;mz=t[1]-S.z;const L=Math.hypot(mx,mz)||1;mx/=L;mz/=L}}}
+ }else{
+  mx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);mz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  // screen->world: camera looks along (-1,-1): right = (1,0,-1)/√2, down = (1,0,1)/√2
+  let sxv=mx+stick.x,syv=mz+stick.y;mx=(sxv+syv)*.7071;mz=(syv-sxv)*.7071;
+  if(wantFire){if(performance.now()-mouse.moved<4000&&mouse.moved){const a=mouseAim();if(a!==null)aimA=a}else if(tn&&td<22)aimA=Math.atan2(tn.x-S.x,tn.z-S.z)}
+  if(!wantFire&&tn&&td<22&&(mx||mz)===0)aimA=null}
+ if(S.auto&&(mx||mz)&&tn&&rs.some(o=>o.active&&!o.cleared)){const m0=Math.hypot(mx,mz);const base=Math.atan2(mx,mz);for(const off of [0,.9,-.9,1.8,-1.8]){const a2=base+off;if(free(S.x+Math.sin(a2)*1.6,S.z+Math.cos(a2)*1.6,R)){mx=Math.sin(a2)*m0;mz=Math.cos(a2)*m0;break}}}
+ const L=Math.hypot(mx,mz);if(L>1){mx/=L;mz/=L}
+ // dash
+ if(S.wantDash&&S.dashCd<=0){S.dash=.22;S.dashCd=1.1*buildStats.dodge;S.dd=[mx||Math.sin(S.face),mz||Math.cos(S.face)];const q=Math.hypot(...S.dd)||1;S.dd=[S.dd[0]/q,S.dd[1]/q]}S.wantDash=0;
+ let vx=mx*5.2,vz=mz*5.2;if(S.dash>0){vx=S.dd[0]*17;vz=S.dd[1]*17;S.dash-=dt}S.dashCd-=dt;
+ if(free(S.x+vx*dt,S.z,R))S.x+=vx*dt;if(free(S.x,S.z+vz*dt,R))S.z+=vz*dt;if(!free(S.x,S.z,R)){const ao=rs.find(q=>q.active&&!q.cleared)||rs.find(q=>d.roomId[idx(cellOf(S.x),cellOf(S.z))]===q.r.id);if(ao){const ux=ao.r.cx*T-S.x,uz=ao.r.cy*T-S.z,L=Math.hypot(ux,uz)||1;S.x+=ux/L*6*dt;S.z+=uz/L*6*dt}}
+ if(aimA!==null)S.face=aimA;else if(L>.1)S.face=Math.atan2(mx,mz);
+ // fire
+ S.fireCd-=dt;S.skillCd-=dt;if(S.wantSkill&&S.skillCd<=0&&aimA!==null||S.wantSkill&&S.skillCd<=0&&tn){S.burst=6;S.skillCd=6}S.wantSkill=0;
+ if(S.burst>0&&S.fireCd<=0){shoot(aimA??Math.atan2((tn?.x??S.x)-S.x,(tn?.z??S.z+1)-S.z),14,.03);S.burst--;S.fireCd=.05}
+ else if(wantFire&&aimA!==null&&S.fireCd<=0){shoot(aimA,9,S.auto?.07:.035);S.fireCd=.12*buildStats.rate}
+ // support drone: ordinary line of sight, no wall penetration
+ droneVisual.visible=buildStats.drone>0;droneVisual.position.set(S.x+1.4,2.2,S.z-1.4);droneCd-=dt;if(buildStats.drone>0&&droneCd<=0){const target=enemies.filter(e=>Math.hypot(e.x-S.x,e.z-S.z)<buildStats.range&&!losBlocked(S.x,S.z,e.x,e.z)).sort((a,b)=>Math.hypot(a.x-S.x,a.z-S.z)-Math.hypot(b.x-S.x,b.z-S.z))[0];if(target){target.hp-=buildStats.drone;target.marked=3;target.hit=.15;droneCd=buildStats.droneRate;droneVisual.children[0].material.emissive.setHex(0x55ffff)}}else droneVisual.children[0].material.emissive.setHex(0);
+ // bullets
+ for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];let hit=false;
+  for(const e of enemies)if(!b.hitIds.has(e)&&Math.hypot(e.x-b.x,e.z-b.z)<e.r+.15){e.hp-=b.dmg+(e.marked>0?buildStats.link:0);e.hit=.1;b.hitIds.add(e);if(--b.left<=0){hit=true;break}}
+  const sp=60*dt,n=Math.max(3,Math.ceil(sp/.4));for(let k=0;k<n&&!hit;k++){b.x+=b.dx*sp/n;b.z+=b.dz*sp/n;if(!walk(b.x,b.z)&&!locked.has(idx(cellOf(b.x),cellOf(b.z)))){hit=true;break}if(locked.has(idx(cellOf(b.x),cellOf(b.z)))){hit=true;break}
+   for(const e of enemies)if(!b.hitIds.has(e)&&Math.hypot(e.x-b.x,e.z-b.z)<e.r+.15){e.hp-=b.dmg+(e.marked>0?buildStats.link:0);e.hit=.1;b.hitIds.add(e);if(--b.left<=0){hit=true;break}}}
+  b.m.position.x=b.x;b.m.position.z=b.z;b.life-=dt;if(hit||b.life<=0){sc.remove(b.m);bullets.splice(i,1)}}
+ for(let i=ebul.length-1;i>=0;i--){const b=ebul[i];b.x+=b.dx*13*dt;b.z+=b.dz*13*dt;b.m.position.x=b.x;b.m.position.z=b.z;b.life-=dt;let rm=b.life<=0||!walk(b.x,b.z);if(Math.hypot(b.x-S.x,b.z-S.z)<R+.2){hurt(6);rm=true}if(rm){sc.remove(b.m);ebul.splice(i,1)}}
+ // enemies
+ for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];const dx=S.x-e.x,dz=S.z-e.z,dd=Math.hypot(dx,dz)||1;const los=!losBlocked(e.x,e.z,S.x,S.z);
+  let want=e.kind==='shooter'?(dd>11?1:dd<7?-.8:0):(dd>e.r+R+.1?1:0);if(e.kind==='boss')want=dd>3?1:0;
+  let vx=dx/dd*e.sp*want,vz=dz/dd*e.sp*want;
+  if(e.kind==='shooter'){
+   if(!los){e.noLosT=(e.noLosT||0)+dt;e.strafeT=(e.strafeT||0)-dt;
+    if(e.noLosT>2.2){vx=dx/dd*e.sp;vz=dz/dd*e.sp}
+    else{if(e.strafeT<=0){e.strafeT=.8+Math.random()*.8;const px=-dz/dd,pz=dx/dd,dir=Math.random()<.5?1:-1;const f1=free(e.x+px*dir*2.2,e.z+pz*dir*2.2,e.r);e.sx=px*(f1?dir:-dir);e.sz=pz*(f1?dir:-dir)}
+     vx=e.sx*e.sp;vz=e.sz*e.sp;if(dd>16){vx+=dx/dd*e.sp*.5;vz+=dz/dd*e.sp*.5}}
+   }else{e.noLosT=0;if(e.strafeT>0){e.strafeT-=dt;vx=e.sx*e.sp*.7;vz=e.sz*e.sp*.7}else if(Math.random()<dt*.4){e.strafeT=.5+Math.random()*.5;const px=-dz/dd,pz=dx/dd,dir=Math.random()<.5?1:-1;const f1=free(e.x+px*dir*2.2,e.z+pz*dir*2.2,e.r);e.sx=px*(f1?dir:-dir);e.sz=pz*(f1?dir:-dir)}}
+  }
+  let emoved=false;
+  if(free(e.x+vx*dt,e.z,e.r)){e.x+=vx*dt;emoved=true}
+  if(free(e.x,e.z+vz*dt,e.r)){e.z+=vz*dt;emoved=true}
+  if(!emoved&&(vx||vz)){const sp0=Math.hypot(vx,vz),base=Math.atan2(vx,vz);
+   for(const off of [.7,-.7,1.4,-1.4,2.2,-2.2]){const nx=Math.sin(base+off)*sp0,nz=Math.cos(base+off)*sp0;
+    if(free(e.x+nx*dt,e.z,e.r)&&free(e.x,e.z+nz*dt,e.r)){e.x+=nx*dt;e.z+=nz*dt;emoved=true;break}}}
+  for(const q of enemies){if(q===e)continue;const ex=e.x-q.x,ez=e.z-q.z,ed=Math.hypot(ex,ez);if(ed<e.r+q.r&&ed>.01){const k=(e.r+q.r-ed)*.5;if(free(e.x+ex/ed*k,e.z,e.r))e.x+=ex/ed*k;if(free(e.x,e.z+ez/ed*k,e.r))e.z+=ez/ed*k}}
+  e.cd-=dt;if(e.kind==='shooter'&&e.cd<=0&&dd<20&&los){e.cd=1.5;eshoot(e)}
+  if(e.kind==='boss'){e.cd2-=dt;if(e.cd2<=0){e.cd2=5;for(let k=0;k<8;k++){const a=k/8*Math.PI*2;const m=new THREE.Mesh(new THREE.SphereGeometry(.2),eMat);m.position.set(e.x,1.2,e.z);sc.add(m);ebul.push({m,dx:Math.sin(a),dz:Math.cos(a),life:2.2,x:e.x,z:e.z})}}}
+  if(e.kind!=='shooter'&&dd<e.r+R+.35&&e.cd<=0){e.cd=e.kind==='boss'?1.2:.8;hurt(e.kind==='boss'?16:8)}
+  e.g.position.set(e.x,0,e.z);e.g.rotation.y=Math.atan2(dx,dz);e.hit-=dt;e.marked=(e.marked||0)-dt;e.g.children[0].material.emissive?.setHex(e.hit>0?0x884444:0);e.hpbar.scale.x=Math.max(.01,e.hp/e.hpMax);e.hpbar.quaternion.copy(cam.quaternion);
+  if(e.hp<=0){sc.remove(e.g);enemies.splice(i,1);const o=e.room;o.enemies.splice(o.enemies.indexOf(e),1);S.kills++;const oldLevel=levelFor(S.xp);S.xp+=e.xp;if(levelFor(S.xp)>oldLevel){msg('레벨 업! 전투 후 빌드 포인트를 배분하세요');saveGame()}if(!o.enemies.length)clearRoom(o)}}
+ if(S.pendDie){S.pendDie=0;die()}
+ flashM.visible=(S.mf-=dt)>0;pl.position.set(S.x,0,S.z);pl.rotation.y=S.face;pl.children[0].material.emissive.setHex(S.hitFlash>0?0x883333:S.dash>0?0x335577:0);S.hitFlash-=dt;
+}
+function hud(){{const tb=$('top').getBoundingClientRect();$('bAuto').style.top=Math.round(tb.bottom+8)+'px';$('bBuild').style.top=Math.round(tb.bottom+8)+'px'}$('xp').textContent='Lv.'+levelFor(S.xp)+' · XP '+S.xp+' · 포인트 '+(pointsFor(S.xp)-usedPoints(build))+(S.reward?' · 완주 보상 +'+S.reward:' · 완주 보상 대기');$('hpt').textContent='체력 '+Math.max(0,Math.ceil(S.hp))+'/'+S.hpMax;$('hp').style.width=Math.max(0,S.hp/S.hpMax*100)+'%';const n=rs.filter(q=>q.cleared&&!q.empty&&q.r.type!=='entrance').length;$('zt').textContent='구역 '+n+'/'+fightRooms.length;
+ const act=rs.find(o=>o.active&&!o.cleared);$('et').textContent=act?'적 '+act.enemies.length+' 남음 · 전멸 시 길 개방':S.won?'샘플 종료':'다음 구역으로 이동'}
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;step(dt);saveClock+=dt;if(saveClock>=5){saveClock=0;saveGame()}cam.position.set(S.x+22*ZM,28*ZM,S.z+22*ZM);cam.lookAt(S.x,0,S.z);hud();mapDraw();rd.render(sc,cam);window.__fps=(window.__fps||0)*.9+.1/Math.max(dt,.001);requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+window.GB={free,R,locked,cover,losBlocked,bullets,ebul,dbg:()=>({btnFire,mDown:mouse.down,msx:mouse.x,msy:mouse.y,mmoved:mouse.moved,stk:[stick.x,stick.y]}),resetDungeon,reenter,S,d,rs,enemies,ent,T,step,proj(x,z){const v=new THREE.Vector3(x,1,z).project(cam);return[(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]},tpRoom(id){const o=rs.find(q=>q.r.id===id);S.x=o.r.cx*T;S.z=o.r.cy*T},gun:()=>({gunLoaded,gunInfo}),walk,fightRooms};
+// restore only matching map; invalid positions fail safely to preparation
+if(loaded?.run&&!P.has('seed')&&!P.has('rooms')){const r=loaded.run;try{for(const rec of r.rooms){const o=rs.find(q=>q.r.id===rec.id);if(o){o.cleared=!!rec.cleared;o.active=!!rec.active}}for(const ii of r.locked||[]){if(!Number.isInteger(ii)||ii<0||ii>=W*H)continue;locked.add(ii);const m=new THREE.Mesh(new THREE.BoxGeometry(T,2.6,T),new THREE.MeshBasicMaterial({color:0xff3030,transparent:true,opacity:.35}));m.position.set(ii%W*T,1.3,Math.floor(ii/W)*T);sc.add(m);barriers.set(ii,m)}for(const rec of r.enemies){const o=rs.find(q=>q.r.id===rec.roomId);if(!o||!['grunt','shooter','boss'].includes(rec.kind)||!Number.isFinite(rec.x)||!Number.isFinite(rec.z)||!Number.isFinite(rec.hp)||rec.hp<=0)throw Error('enemy');const e=spawnEnemy(o,rec.x,rec.z,rec.kind);e.hp=Math.min(e.hpMax,rec.hp)}if(!free(r.x,r.z,R))throw Error('position');S.x=r.x;S.z=r.z;S.hp=Math.max(1,Math.min(S.hpMax,Number(r.hp)||S.hpMax));S.t=Math.max(0,Number(r.t)||0);S.reward=Math.max(0,Number(r.reward)||0);S.won=!!r.won;if(r.over)showOv(r.ovKind==='dead'?'dead':'won');else if(S.won)S.winT=1;msg(saveRecovered?'백업 저장에서 복원했습니다':'저장된 진행을 복원했습니다')}catch(e){resetDungeon();msg('던전 복원 실패: 성장 유지, 준비 구역으로 복귀')}}
+$('saveState').textContent=saveError||'저장 준비됨 · 이 브라우저';
+window.GB.progression={get build(){return {...build}},get stats(){return {...buildStats}},saveGame,openBuild,closeBuild,atBase,safeToSpend};
+$('help').textContent=TOUCH?'':'WASD 이동 · 마우스 조준 · 클릭/J 공격 · Space 회피 · Q 점사 · T 자동 · B 빌드';window.READY=1;
+</script></body></html>
