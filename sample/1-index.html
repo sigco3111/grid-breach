@@ -1,0 +1,190 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Grid Breach - 첫 플레이 샘플 (rough)</title>
+<style>
+@font-face{font-family:NG;src:url(ng.ttf)}
+html,body{margin:0;height:100%;background:#05080c;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;font-family:NG,sans-serif;color:#dfe8f0}
+canvas#c{position:fixed;inset:0;width:100%;height:100%}
+.hud{position:fixed;pointer-events:none;font-size:13px}
+#top{left:10px;top:max(10px,env(safe-area-inset-top));background:rgba(10,16,24,.7);border:1px solid #2a3a4a;border-radius:8px;padding:8px 10px;min-width:170px}
+#hpbar{height:8px;background:#222;border-radius:4px;margin-top:6px;overflow:hidden}#hp{height:100%;background:#5ccf7a;width:100%}
+#zone{right:10px;top:max(10px,env(safe-area-inset-top));background:rgba(10,16,24,.7);border:1px solid #2a3a4a;border-radius:8px;padding:8px 10px;text-align:right}
+#mm{position:fixed;right:10px;top:84px;width:110px;height:120px;background:rgba(5,10,16,.6);border:1px solid #2a3a4a;border-radius:6px}
+#msg{left:50%;top:30%;transform:translateX(-50%);max-width:66vw;font-size:19px;text-shadow:0 0 8px #000;opacity:0;transition:opacity .4s;text-align:center}
+.b{position:fixed;width:64px;height:64px;border-radius:50%;background:rgba(20,30,42,.75);border:2px solid #5a7a96;color:#fff;font:14px NG,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1}
+.b.on{background:rgba(70,140,90,.85);border-color:#9ef0b0}
+#bFire{right:max(18px,env(safe-area-inset-right));bottom:max(26px,env(safe-area-inset-bottom));width:84px;height:84px;font-size:16px}
+#bDodge{right:calc(max(18px,env(safe-area-inset-right)) + 96px);bottom:max(26px,env(safe-area-inset-bottom))}
+#bSkill{right:calc(max(18px,env(safe-area-inset-right)) + 10px);bottom:calc(max(26px,env(safe-area-inset-bottom)) + 96px)}
+#bAuto{left:10px;top:112px;width:56px;height:56px}
+#stick{position:fixed;left:max(24px,env(safe-area-inset-left));bottom:max(30px,env(safe-area-inset-bottom));width:120px;height:120px;border-radius:50%;border:2px solid rgba(120,150,180,.5);background:rgba(20,30,42,.35)}
+#knob{position:absolute;left:40px;top:40px;width:40px;height:40px;border-radius:50%;background:rgba(160,200,230,.7)}
+#help{left:10px;bottom:6px;font-size:11px;color:#8aa0b4}
+body:not(.touch) #stick,body:not(.touch) #bFire,body:not(.touch) #bDodge,body:not(.touch) #bSkill{display:none}
+body.touch #help{display:none}
+@media (max-height:450px){#mm{width:88px;height:96px;top:68px}}
+#flash{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,0,0,0) 45%,rgba(255,30,30,.55) 100%);opacity:0;transition:opacity .25s}
+#xp{margin-top:4px;color:#e8d38a}
+#ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(3,6,10,.72);z-index:5}#ov.on{display:flex}
+#ovb{background:rgba(14,22,32,.96);border:1px solid #4a6a86;border-radius:12px;padding:20px 24px;text-align:center;max-width:80vw}
+#ovb h2{margin:0 0 10px;font-size:22px}#ovb p{margin:4px 0;font-size:14px;color:#b8c8d8;line-height:1.4}
+#ovbtn{margin-top:14px;display:inline-block;padding:12px 28px;border-radius:24px;background:#3d8a5a;border:2px solid #9ef0b0;color:#fff;font:17px NG,sans-serif}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="hud" id="top"><div id="hpt">체력 100/100</div><div id="hpbar"><div id="hp"></div></div><div id="gunname" style="margin-top:6px;color:#9fb4c6">소총 (샘플)</div><div id="xp">XP 0</div></div><div id="flash"></div><div id="ov"><div id="ovb"><h2 id="ovh"></h2><p id="ovp"></p><div id="ovbtn">다시 입장</div></div></div>
+<div class="hud" id="zone"><div id="zt">구역 0/0</div><div id="et">적 0 남음</div></div>
+<canvas id="mm" width="110" height="120"></canvas>
+<div class="hud" id="msg"></div>
+<div id="stick"><div id="knob"></div></div>
+<div class="b on" id="bAuto">자동<br>OFF</div><div class="b" id="bSkill">점사<br>Q</div><div class="b" id="bDodge">회피<br>Space</div><div class="b" id="bFire">공격<br>J</div>
+<div class="hud" id="help">WASD 이동 · 마우스 조준 · 클릭/J 공격 · Space 회피 · Q 점사 · T 자동</div>
+<script type="importmap">{"imports":{"three":"./three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';import {OBJLoader} from './OBJLoader.js';import {MTLLoader} from './MTLLoader.js';
+import {generateDungeon} from './dgen.mjs';
+const P=new URLSearchParams(location.search);const SEED=+(P.get('seed')||1337),NR=+(P.get('rooms')||7);
+const T=4,R=0.45;const ZM=+(P.get('zoom')||1);
+const d=generateDungeon({seed:SEED,roomCount:NR,themeKey:'frost',loopChance:0.1,decorDensity:0});
+const W=d.W,H=d.H,idx=(x,y)=>y*W+x;
+const $=id=>document.getElementById(id);
+const TOUCH=P.get('touch')?true:(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window);document.body.classList.toggle('touch',TOUCH);
+const cv=$('c');const rd=new THREE.WebGLRenderer({canvas:cv,antialias:false,powerPreference:'high-performance'});rd.setPixelRatio(Math.min(devicePixelRatio,2));
+const sc=new THREE.Scene();sc.background=new THREE.Color(0x070b10);sc.fog=new THREE.Fog(0x070b10,38,80);
+sc.add(new THREE.HemisphereLight(0xb8c8dc,0x3a3d44,2.4));const dl=new THREE.DirectionalLight(0xffeedd,2.2);dl.position.set(-10,24,8);sc.add(dl);
+const cam=new THREE.PerspectiveCamera(38,1,1,200);
+function resize(){rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+// ---- map
+const floorTiles=[],wallTiles=[];const isF=(x,y)=>x>=0&&y>=0&&x<W&&y<H&&d.grid[idx(x,y)]===1;
+for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(isF(x,y)){floorTiles.push([x,y]);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(!isF(x+dx,y+dy)&&!d.doorway[idx(x,y)])wallTiles.push([x+dx,y+dy])}
+const wallSet=[...new Set(wallTiles.map(([x,y])=>x+','+y))].map(s=>s.split(',').map(Number));
+const fm=new THREE.InstancedMesh(new THREE.BoxGeometry(T,.4,T),new THREE.MeshStandardMaterial({color:0x2c3846,roughness:.9}),floorTiles.length);
+const m4=new THREE.Matrix4();floorTiles.forEach(([x,y],i)=>{m4.makeTranslation(x*T,-.2,y*T);fm.setMatrixAt(i,m4);const c=new THREE.Color().setHSL(.58,.12,.30+(((x+y)%2)?.05:0)+((x*7+y*13)%5)*.012);fm.setColorAt(i,c)});sc.add(fm);
+const wm=new THREE.InstancedMesh(new THREE.BoxGeometry(T,1.3,T),new THREE.MeshStandardMaterial({color:0x7a8ca2,roughness:.8}),wallSet.length);
+wallSet.forEach(([x,y],i)=>{m4.makeTranslation(x*T,.65,y*T);wm.setMatrixAt(i,m4)});sc.add(wm);
+const locked=new Set();const barriers=new Map();
+const cellOf=v=>Math.round(v/T);
+const walk=(wx,wz)=>{const cx=cellOf(wx),cy=cellOf(wz);return cx>=0&&cy>=0&&cx<W&&cy<H&&d.grid[idx(cx,cy)]===1&&!locked.has(idx(cx,cy))};
+const free=(x,z,r)=>walk(x-r,z-r)&&walk(x+r,z-r)&&walk(x-r,z+r)&&walk(x+r,z+r);
+// ---- rooms
+const rooms=d.rooms;const ent=rooms.find(r=>r.type==='entrance')||rooms[0];
+const rs=rooms.map(r=>({r,cleared:r.type==='entrance',active:false,enemies:[]}));
+rs.forEach(o=>{o.empty=o.r.type!=='entrance'&&o.r.id!==d.boss&&o.r.type!=='boss'&&!d.spawns.some(s=>s.roomId===o.r.id);if(o.empty)o.cleared=true});
+const fightRooms=rs.filter(o=>!o.cleared);const emptyN=rs.filter(o=>o.empty).length;
+function roomCells(id){const a=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(d.roomId[idx(x,y)]===id&&d.grid[idx(x,y)]===1)a.push([x,y]);return a}
+rs.forEach(o=>{o.cells=roomCells(o.r.id);const s=new Set(o.cells.map(([x,y])=>idx(x,y)));o.doors=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=idx(x,y);if(!d.doorway[i])continue;if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>x+dx>=0&&y+dy>=0&&x+dx<W&&y+dy<H&&s.has(idx(x+dx,y+dy))))o.doors.push(i)}});
+// ---- actors
+const mk=(col,h,r=.4)=>{const g=new THREE.Group();const b=new THREE.Mesh(new THREE.CapsuleGeometry(r,h-2*r,4,8),new THREE.MeshStandardMaterial({color:col,roughness:.7}));b.position.y=h/2;g.add(b);return g};
+const pl=mk(0x3b5c4a,1.8,.42);sc.add(pl);const face=new THREE.Mesh(new THREE.BoxGeometry(.5,.18,.3),new THREE.MeshStandardMaterial({color:0x111,emissive:0x2a6a8a}));face.position.set(0,1.55,.3);pl.add(face);
+const gunPivot=new THREE.Group();gunPivot.position.set(-.2,1.12,0);pl.add(gunPivot);
+const skin=new THREE.MeshStandardMaterial({color:0x2b3b33,roughness:.8});const limb=(a,b)=>{const v=new THREE.Vector3().subVectors(b,a),L=v.length();const m=new THREE.Mesh(new THREE.CylinderGeometry(.09,.08,L,6),skin);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());pl.add(m)};
+limb(new THREE.Vector3(-.34,1.4,0),new THREE.Vector3(-.2,1.1,.42));limb(new THREE.Vector3(.34,1.4,0),new THREE.Vector3(-.2,1.12,.95));
+const flashM=new THREE.Mesh(new THREE.SphereGeometry(.16,6,6),new THREE.MeshBasicMaterial({color:0xffd060}));flashM.position.set(-.2,1.12,1.35);flashM.visible=false;pl.add(flashM);
+const S={hp:100,hpMax:100,x:ent.cx*T,z:ent.cy*T,face:0,dash:0,dashCd:0,fireCd:0,skillCd:0,burst:0,auto:false,xp:0,reward:0,kills:0,deaths:0,t:0,over:false,hitFlash:0};
+// gun
+const gunUrl="./";let gunLoaded=false,gunInfo=null;
+new MTLLoader().setPath(gunUrl).load('AssaultRifle2_1.mtl',mt=>{mt.preload();const l=new OBJLoader();l.setMaterials(mt);l.setPath(gunUrl).load('AssaultRifle2_1.obj',o=>{
+ o.traverse(m=>{if(m.isMesh){(Array.isArray(m.material)?m.material:[m.material]).forEach(t=>{t.emissive=new THREE.Color(0x4a5866)})}});const g=new THREE.Group();g.add(o);const bb=new THREE.Box3().setFromObject(g);const sz=bb.getSize(new THREE.Vector3());
+ // long axis -> +Z
+ const ax=sz.x>sz.z?'x':'z';if(ax==='x')g.rotation.y=-Math.PI/2;g.updateMatrixWorld(true);
+ const b2=new THREE.Box3().setFromObject(g);const s2=b2.getSize(new THREE.Vector3());const k=1.35/Math.max(s2.x,s2.z);g.scale.setScalar(k);g.updateMatrixWorld(true);
+ const b3=new THREE.Box3().setFromObject(g);const c=b3.getCenter(new THREE.Vector3());const w=new THREE.Group();w.add(g);g.position.set(-c.x,-c.y,-c.z);w.position.z=.62;
+ w.rotation.y=P.get('flip')?Math.PI:0;gunPivot.add(w);gunLoaded=true;gunInfo={sz:sz.toArray(),ax}})});
+// ---- enemies / bullets
+const enemies=[],bullets=[],ebul=[];
+const bGeo=new THREE.BoxGeometry(.07,.07,.9);const bMat=new THREE.MeshBasicMaterial({color:0xffe060});const eMat=new THREE.MeshBasicMaterial({color:0xff5030});
+function spawnEnemy(o,x,z,kind){const ranged=kind==='shooter',boss=kind==='boss';const g=mk(boss?0x7a2a2a:ranged?0xa05a20:0x8a2a2a,boss?3:1.8,boss?.9:.42);g.position.set(x,0,z);sc.add(g);
+ const hpbar=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.14),new THREE.MeshBasicMaterial({color:0xff4040,depthTest:false}));hpbar.position.y=boss?3.6:2.3;hpbar.renderOrder=9;g.add(hpbar);
+ const HP=boss?1000:ranged?50:80;const e={g,hpbar,room:o,kind,x,z,hp:HP,hpMax:HP,r:boss?.9:.45,sp:boss?2.7:ranged?2.6:4.8,cd:Math.random()*1.2,cd2:3,hit:0,xp:boss?120:ranged?15:10};enemies.push(e);o.enemies.push(e);return e}
+function activate(o){o.active=true;const sp=d.spawns.filter(s=>s.roomId===o.r.id);const n=5+Math.round((o.r.difficulty||0.5)*3);
+ for(let i=0;i<n;i++){let x,z;const far=o.cells.filter(([cx,cy])=>Math.hypot(cx*T-S.x,cy*T-S.z)>11);if(i<sp.length&&Math.hypot(sp[i].x*T-S.x,sp[i].y*T-S.z)>9){x=sp[i].x*T;z=sp[i].y*T}else{const c=(far.length?far:o.cells)[Math.floor(Math.random()*(far.length||o.cells.length))];x=c[0]*T;z=c[1]*T}spawnEnemy(o,x+(Math.random()-.5),z+(Math.random()-.5),i%3===2?'shooter':'grunt')}
+ if(o.r.type==='boss'||o.r.id===d.boss){const c=o.cells[Math.floor(o.cells.length/2)];spawnEnemy(o,c[0]*T,c[1]*T,'boss')}
+ if(!o.enemies.length){clearRoom(o);return}
+ for(const i of o.doors){if(i===idx(cellOf(S.x),cellOf(S.z)))continue;locked.add(i);const x=i%W,y=(i-x)/W;const m=new THREE.Mesh(new THREE.BoxGeometry(T,2.6,T),new THREE.MeshBasicMaterial({color:0xff3030,transparent:true,opacity:.35}));m.position.set(x*T,1.3,y*T);sc.add(m);barriers.set(i,m)}
+ msg('구역 봉쇄 · 적을 전멸시키면 길이 열립니다')}
+function clearRoom(o){o.cleared=true;for(const i of o.doors){locked.delete(i);const m=barriers.get(i);if(m){sc.remove(m);barriers.delete(i)}}
+ const n=rs.filter(q=>q.cleared&&!q.empty&&q.r.type!=='entrance').length,N=fightRooms.length;msg(n>=N?'모든 구역 돌파! 완주 보상 지급':'구역 클리어 · 길 개방 '+n+'/'+N);if(n>=N&&!S.won){S.won=true;S.reward+=200;S.winT=1.6}}
+let msgT=0;function msg(t){const e=$('msg');e.textContent=t;e.style.opacity=1;clearTimeout(msgT);msgT=setTimeout(()=>e.style.opacity=0,2200)}
+// ---- input
+const keys={};addEventListener('keydown',e=>{keys[e.code]=1;if(e.code==='KeyT')toggleAuto();if(e.code==='Space'){S.wantDash=1;e.preventDefault()}if(e.code==='KeyQ')S.wantSkill=1});addEventListener('keyup',e=>keys[e.code]=0);
+let mouse={x:0,y:0,down:false,moved:0};cv.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'){mouse.x=e.clientX;mouse.y=e.clientY;mouse.moved=performance.now()}});
+cv.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'){mouse.down=true}});addEventListener('pointerup',()=>mouse.down=false);
+const stick={x:0,y:0,id:null,cx:0,cy:0};const st=$('stick'),kn=$('knob');
+function stickMove(e){const r=st.getBoundingClientRect();const cx=r.left+60,cy=r.top+60;let dx=e.clientX-cx,dy=e.clientY-cy;const L=Math.hypot(dx,dy),M=50;if(L>M){dx*=M/L;dy*=M/L}stick.x=dx/M;stick.y=dy/M;kn.style.left=40+dx+'px';kn.style.top=40+dy+'px'}
+st.addEventListener('pointerdown',e=>{stick.id=e.pointerId;st.setPointerCapture(e.pointerId);stickMove(e)});st.addEventListener('pointermove',e=>{if(e.pointerId===stick.id)stickMove(e)});
+const stEnd=e=>{if(e.pointerId===stick.id){stick.id=null;stick.x=stick.y=0;kn.style.left='40px';kn.style.top='40px'}};st.addEventListener('pointerup',stEnd);st.addEventListener('pointercancel',stEnd);
+let btnFire=false;const bF=$('bFire');bF.addEventListener('pointerdown',e=>{btnFire=true;bF.setPointerCapture(e.pointerId)});bF.addEventListener('pointerup',()=>btnFire=false);bF.addEventListener('pointercancel',()=>btnFire=false);
+$('bDodge').addEventListener('pointerdown',()=>S.wantDash=1);$('bSkill').addEventListener('pointerdown',()=>S.wantSkill=1);
+function toggleAuto(){S.auto=!S.auto;const b=$('bAuto');b.innerHTML='자동<br>'+(S.auto?'ON':'OFF');b.classList.toggle('on',S.auto)}
+$('bAuto').addEventListener('pointerdown',toggleAuto);addEventListener('keydown',e=>{if(e.code==='KeyJ')btnFire=true});addEventListener('keyup',e=>{if(e.code==='KeyJ')btnFire=false});
+if(P.get('auto'))toggleAuto();
+// ---- helpers
+function nearest(){let b=null,bd=1e9;for(const e of enemies){const dd=Math.hypot(e.x-S.x,e.z-S.z);if(dd<bd){bd=dd;b=e}}return[b,bd]}
+const ray=new THREE.Raycaster(),pln=new THREE.Plane(new THREE.Vector3(0,1,0),-1);
+function mouseAim(){const v=new THREE.Vector2(mouse.x/innerWidth*2-1,-(mouse.y/innerHeight)*2+1);ray.setFromCamera(v,cam);const p=new THREE.Vector3();if(ray.ray.intersectPlane(pln,p))return Math.atan2(p.x-S.x,p.z-S.z);return null}
+function shoot(ang,dmg=8,spread=.03){S.mf=.05;const a=ang+(Math.random()-.5)*spread*2;const m=new THREE.Mesh(bGeo,bMat);const dx=Math.sin(a),dz=Math.cos(a);m.position.set(S.x+dx*1.2,1.2,S.z+dz*1.2);m.rotation.y=a;sc.add(m);bullets.push({m,dx,dz,life:.9,dmg,x:m.position.x,z:m.position.z})}
+function eshoot(e){const a=Math.atan2(S.x-e.x,S.z-e.z);const m=new THREE.Mesh(new THREE.SphereGeometry(.18),eMat);m.position.set(e.x,1.2,e.z);sc.add(m);ebul.push({m,dx:Math.sin(a),dz:Math.cos(a),life:2.2,x:e.x,z:e.z})}
+function hurt(n){if(S.dash>0||S.over)return;S.hp-=n;S.dmgTaken=(S.dmgTaken||0)+n;S.hitFlash=.15;{const f=$('flash');f.style.opacity=1;clearTimeout(S.ft);S.ft=setTimeout(()=>f.style.opacity=0,180)}if(S.hp<=0)S.pendDie=1}
+function resetDungeon(){S.hp=S.hpMax;S.x=ent.cx*T;S.z=ent.cy*T;S.dash=0;S.burst=0;for(const e of enemies)sc.remove(e.g);enemies.length=0;for(const o of rs){o.enemies=[];o.active=false;if(!o.empty&&o.r.type!=='entrance')o.cleared=false}for(const i of [...locked])locked.delete(i);for(const [i,m] of barriers)sc.remove(m);barriers.clear();for(const b of ebul)sc.remove(b.m);ebul.length=0;for(const b of bullets)sc.remove(b.m);bullets.length=0;S.won=false}
+function showOv(kind){S.over=true;S.ovKind=kind;const o=$('ov');o.classList.add('on');const m=Math.floor(S.t/60),sec=Math.floor(S.t%60);
+ if(kind==='dead'){$('ovh').textContent='쓰러졌습니다';$('ovp').innerHTML='던전 처음부터 다시 도전합니다.<br>획득 XP '+S.xp+' 유지 · 처치 '+S.kills+' · 사망 '+S.deaths+'회<br>완주 보상은 던전을 끝까지 클리어해야 지급됩니다.';$('ovbtn').textContent='다시 입장'}
+ else{$('ovh').textContent='던전 완주!';$('ovp').innerHTML='완주 보상 +200 지급<br>누적 XP '+S.xp+' · 처치 '+S.kills+' · 사망 '+S.deaths+'회 · 플레이 '+m+'분 '+sec+'초<br>(첫 플레이 샘플 종료)';$('ovbtn').textContent='새로 시작'}}
+function reenter(){if(!S.over)return;$('ov').classList.remove('on');resetDungeon();S.over=false;msg(S.ovKind==='dead'?'던전 처음부터 재입장 (XP 유지)':'새 던전 시작')}
+$('ovbtn').addEventListener('pointerdown',reenter);addEventListener('keydown',e=>{if(S.over&&(e.code==='Enter'||e.code==='Space')){reenter();e.preventDefault()}});
+function die(){S.deaths++;(S.dlog=S.dlog||[]).push(((rs.find(o=>o.active&&!o.cleared)||{r:{type:'none'}}).r.type));resetDungeon();showOv('dead')}
+// BFS toward target room for auto
+function bfsDir(tx,ty){const sx=cellOf(S.x),sy=cellOf(S.z);const prev=new Int32Array(W*H).fill(-2);const q=[idx(sx,sy)];prev[q[0]]=-1;let found=-1;
+ for(let h=0;h<q.length;h++){const c=q[h],x=c%W,y=(c-x)/W;if(x===tx&&y===ty){found=c;break}for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=W||ny>=H)continue;const n=idx(nx,ny);if(prev[n]!==-2||d.grid[n]!==1||locked.has(n))continue;prev[n]=c;q.push(n)}}
+ if(found<0)return null;let c=found,path=[];while(c!==-1){path.push(c);c=prev[c]}path.reverse();const nxt=path[Math.min(3,path.length-1)];return[nxt%W*T,Math.floor(nxt/W)*T]}
+function nextTarget(){const rem=fightRooms.filter(o=>!o.cleared);if(!rem.length)return null;let b=null,bd=1e9;for(const o of rem){const dd=Math.hypot(o.r.cx*T-S.x,o.r.cy*T-S.z);if(dd<bd){bd=dd;b=o}}return b}
+// ---- loop
+let last=performance.now();const mmc=$('mm').getContext('2d');
+function mapDraw(){mmc.clearRect(0,0,110,120);const sx=110/W,sy=120/H;mmc.fillStyle='#2a3948';for(const[x,y] of floorTiles)mmc.fillRect(x*sx,y*sy,Math.max(1,sx),Math.max(1,sy));for(const o of rs){mmc.fillStyle=o.r.type==='entrance'?'#58a':o.cleared?'#3a7':o.active?'#d44':'#a85';mmc.fillRect(o.r.cx*sx-2,o.r.cy*sy-2,4,4)}mmc.fillStyle='#fff';mmc.fillRect(S.x/T*sx-2,S.z/T*sy-2,4,4)}
+function step(dt){if(S.over)return;S.t+=dt;if(S.winT>0){S.winT-=dt;if(S.winT<=0)showOv('won')}
+ // zone activate
+ const ci=idx(cellOf(S.x),cellOf(S.z));const cr=d.roomId[ci];if(cr>=0&&!d.doorway[ci]){const o=rs.find(q=>q.r.id===cr);if(o&&!o.cleared&&!o.active)activate(o)}
+ let mx=0,mz=0,wantFire=btnFire||mouse.down,aimA=null;
+ const [tn,td]=nearest();
+ if(S.auto){const act=rs.find(o=>o.active&&!o.cleared);
+  if(tn&&act){const toE=Math.atan2(tn.x-S.x,tn.z-S.z);const k=td<7?-1:td>10?1:0;const sf=td<6?.1:.35;mx=Math.sin(toE)*k+Math.cos(toE)*sf*Math.sin(S.t*.9);mz=Math.cos(toE)*k-Math.sin(toE)*sf*Math.sin(S.t*.9);aimA=toE;wantFire=td<22;if(td<2.2&&S.dashCd<=0)S.wantDash=1;if(S.skillCd<=0&&td<14)S.wantSkill=1;
+   for(const b of ebul)if(Math.hypot(b.x-S.x,b.z-S.z)<2&&S.dashCd<=0){S.wantDash=1}}
+  else{const tr=nextTarget();if(tr){const t=bfsDir(tr.r.cx,tr.r.cy);if(t){mx=t[0]-S.x;mz=t[1]-S.z;const L=Math.hypot(mx,mz)||1;mx/=L;mz/=L}}}
+ }else{
+  mx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);mz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  // screen->world: camera looks along (-1,-1): right = (1,0,-1)/√2, down = (1,0,1)/√2
+  let sxv=mx+stick.x,syv=mz+stick.y;mx=(sxv+syv)*.7071;mz=(syv-sxv)*.7071;
+  if(wantFire){if(performance.now()-mouse.moved<4000&&mouse.moved){const a=mouseAim();if(a!==null)aimA=a}else if(tn&&td<22)aimA=Math.atan2(tn.x-S.x,tn.z-S.z)}
+  if(!wantFire&&tn&&td<22&&(mx||mz)===0)aimA=null}
+ if(S.auto&&(mx||mz)&&tn&&rs.some(o=>o.active&&!o.cleared)){const m0=Math.hypot(mx,mz);const base=Math.atan2(mx,mz);for(const off of [0,.9,-.9,1.8,-1.8]){const a2=base+off;if(free(S.x+Math.sin(a2)*1.6,S.z+Math.cos(a2)*1.6,R)){mx=Math.sin(a2)*m0;mz=Math.cos(a2)*m0;break}}}
+ const L=Math.hypot(mx,mz);if(L>1){mx/=L;mz/=L}
+ // dash
+ if(S.wantDash&&S.dashCd<=0){S.dash=.22;S.dashCd=1.1;S.dd=[mx||Math.sin(S.face),mz||Math.cos(S.face)];const q=Math.hypot(...S.dd)||1;S.dd=[S.dd[0]/q,S.dd[1]/q]}S.wantDash=0;
+ let vx=mx*5.2,vz=mz*5.2;if(S.dash>0){vx=S.dd[0]*17;vz=S.dd[1]*17;S.dash-=dt}S.dashCd-=dt;
+ if(free(S.x+vx*dt,S.z,R))S.x+=vx*dt;if(free(S.x,S.z+vz*dt,R))S.z+=vz*dt;
+ if(aimA!==null)S.face=aimA;else if(L>.1)S.face=Math.atan2(mx,mz);
+ // fire
+ S.fireCd-=dt;S.skillCd-=dt;if(S.wantSkill&&S.skillCd<=0&&aimA!==null||S.wantSkill&&S.skillCd<=0&&tn){S.burst=6;S.skillCd=6}S.wantSkill=0;
+ if(S.burst>0&&S.fireCd<=0){shoot(aimA??Math.atan2((tn?.x??S.x)-S.x,(tn?.z??S.z+1)-S.z),14,.03);S.burst--;S.fireCd=.05}
+ else if(wantFire&&aimA!==null&&S.fireCd<=0){shoot(aimA,9,S.auto?.07:.035);S.fireCd=.12}
+ // bullets
+ for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];let hit=false;const sp=60*dt,n=3;for(let k=0;k<n&&!hit;k++){b.x+=b.dx*sp/n;b.z+=b.dz*sp/n;if(!walk(b.x,b.z)&&!locked.has(idx(cellOf(b.x),cellOf(b.z)))){hit=true;break}if(locked.has(idx(cellOf(b.x),cellOf(b.z)))){hit=true;break}
+   for(const e of enemies)if(Math.hypot(e.x-b.x,e.z-b.z)<e.r+.15){e.hp-=b.dmg;e.hit=.1;hit=true;break}}
+  b.m.position.x=b.x;b.m.position.z=b.z;b.life-=dt;if(hit||b.life<=0){sc.remove(b.m);bullets.splice(i,1)}}
+ for(let i=ebul.length-1;i>=0;i--){const b=ebul[i];b.x+=b.dx*13*dt;b.z+=b.dz*13*dt;b.m.position.x=b.x;b.m.position.z=b.z;b.life-=dt;let rm=b.life<=0||!walk(b.x,b.z);if(Math.hypot(b.x-S.x,b.z-S.z)<R+.2){hurt(6);rm=true}if(rm){sc.remove(b.m);ebul.splice(i,1)}}
+ // enemies
+ for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];const dx=S.x-e.x,dz=S.z-e.z,dd=Math.hypot(dx,dz)||1;let want=e.kind==='shooter'?(dd>11?1:dd<7?-.8:0):(dd>e.r+R+.1?1:0);if(e.kind==='boss')want=dd>3?1:0;
+  const vx=dx/dd*e.sp*want,vz=dz/dd*e.sp*want;if(free(e.x+vx*dt,e.z,e.r))e.x+=vx*dt;if(free(e.x,e.z+vz*dt,e.r))e.z+=vz*dt;
+  for(const q of enemies){if(q===e)continue;const ex=e.x-q.x,ez=e.z-q.z,ed=Math.hypot(ex,ez);if(ed<e.r+q.r&&ed>.01){const k=(e.r+q.r-ed)*.5;if(free(e.x+ex/ed*k,e.z,e.r))e.x+=ex/ed*k;if(free(e.x,e.z+ez/ed*k,e.r))e.z+=ez/ed*k}}
+  e.cd-=dt;if(e.kind==='shooter'&&e.cd<=0&&dd<20){e.cd=1.5;eshoot(e)}
+  if(e.kind==='boss'){e.cd2-=dt;if(e.cd2<=0){e.cd2=5;for(let k=0;k<8;k++){const a=k/8*Math.PI*2;const m=new THREE.Mesh(new THREE.SphereGeometry(.2),eMat);m.position.set(e.x,1.2,e.z);sc.add(m);ebul.push({m,dx:Math.sin(a),dz:Math.cos(a),life:2.2,x:e.x,z:e.z})}}}
+  if(e.kind!=='shooter'&&dd<e.r+R+.35&&e.cd<=0){e.cd=e.kind==='boss'?1.2:.8;hurt(e.kind==='boss'?16:8)}
+  e.g.position.set(e.x,0,e.z);e.g.rotation.y=Math.atan2(dx,dz);e.hit-=dt;e.g.children[0].material.emissive?.setHex(e.hit>0?0x884444:0);e.hpbar.scale.x=Math.max(.01,e.hp/e.hpMax);e.hpbar.quaternion.copy(cam.quaternion);
+  if(e.hp<=0){sc.remove(e.g);enemies.splice(i,1);const o=e.room;o.enemies.splice(o.enemies.indexOf(e),1);S.kills++;S.xp+=e.xp;if(!o.enemies.length)clearRoom(o)}}
+ if(S.pendDie){S.pendDie=0;die()}
+ flashM.visible=(S.mf-=dt)>0;pl.position.set(S.x,0,S.z);pl.rotation.y=S.face;pl.children[0].material.emissive.setHex(S.hitFlash>0?0x883333:S.dash>0?0x335577:0);S.hitFlash-=dt;
+}
+function hud(){{const tb=$('top').getBoundingClientRect();$('bAuto').style.top=Math.round(tb.bottom+8)+'px'}$('xp').textContent='XP '+S.xp+(S.reward?' · 완주 보상 +'+S.reward:' · 완주 보상 대기');$('hpt').textContent='체력 '+Math.max(0,Math.ceil(S.hp))+'/'+S.hpMax;$('hp').style.width=Math.max(0,S.hp/S.hpMax*100)+'%';const n=rs.filter(q=>q.cleared&&!q.empty&&q.r.type!=='entrance').length;$('zt').textContent='구역 '+n+'/'+fightRooms.length;
+ const act=rs.find(o=>o.active&&!o.cleared);$('et').textContent=act?'적 '+act.enemies.length+' 남음 · 전멸 시 길 개방':S.won?'샘플 종료':'다음 구역으로 이동'}
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;step(dt);cam.position.set(S.x+22*ZM,28*ZM,S.z+22*ZM);cam.lookAt(S.x,0,S.z);hud();mapDraw();rd.render(sc,cam);window.__fps=(window.__fps||0)*.9+.1/Math.max(dt,.001);requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+window.GB={reenter,S,d,rs,enemies,ent,T,step,proj(x,z){const v=new THREE.Vector3(x,1,z).project(cam);return[(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]},tpRoom(id){const o=rs.find(q=>q.r.id===id);S.x=o.r.cx*T;S.z=o.r.cy*T},gun:()=>({gunLoaded,gunInfo}),walk,fightRooms};
+$('help').textContent=TOUCH?'':'WASD 이동 · 마우스 조준 · 클릭/J 공격 · Space 회피 · Q 점사 · T 자동';window.READY=1;
+</script></body></html>
